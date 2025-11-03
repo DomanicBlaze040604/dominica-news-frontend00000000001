@@ -6,6 +6,8 @@ import NewsCard from "@/components/NewsCard";
 import { Button } from "@/components/ui/button";
 import { articlesService } from "../services/articles";
 import { categoriesService } from "../services/categories";
+import { Footer } from "../components/layout/Footer";
+import { Header } from "../components/layout/Header";
 import { ChevronRight, Home } from "lucide-react";
 
 const CategoryPage = () => {
@@ -32,7 +34,9 @@ const CategoryPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Header>
+        <Navbar />
+      </Header>
       
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
@@ -151,20 +155,7 @@ const CategoryPage = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-primary text-primary-foreground mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2">DOMINICA NEWS</h3>
-            <p className="text-primary-foreground/80 text-sm">
-              Your trusted source for news from Dominica and around the world
-            </p>
-            <p className="text-primary-foreground/60 text-xs mt-4">
-              © 2025 Dominica News. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

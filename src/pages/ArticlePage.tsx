@@ -7,6 +7,8 @@ import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { articlesService } from "../services/articles";
+import { Footer } from "../components/layout/Footer";
+import { Header } from "../components/layout/Header";
 import { ChevronRight, Home, Calendar, User, Share2, Facebook, Twitter, Linkedin } from "lucide-react";
 import { format } from "date-fns";
 
@@ -54,7 +56,9 @@ const ArticlePage = () => {
   if (isLoadingArticle) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+        <Header>
+          <Navbar />
+        </Header>
         <main className="container mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-64 mb-6"></div>
@@ -75,7 +79,9 @@ const ArticlePage = () => {
   if (articleError || !article) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+        <Header>
+          <Navbar />
+        </Header>
         <main className="container mx-auto px-4 py-8">
           <div className="text-center py-16">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Article Not Found</h1>
@@ -95,7 +101,9 @@ const ArticlePage = () => {
     <div className="min-h-screen bg-background">
       {/* SEO Head with structured data */}
       {article && <SEOHead article={article} />}
-      <Navbar />
+      <Header>
+        <Navbar />
+      </Header>
       
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
@@ -140,7 +148,7 @@ const ArticlePage = () => {
             <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground border-b pb-6">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                <span>By {article.author.fullName}</span>
+                <span>By {article.author.name}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -285,20 +293,7 @@ const ArticlePage = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-primary text-primary-foreground mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2">DOMINICA NEWS</h3>
-            <p className="text-primary-foreground/80 text-sm">
-              Your trusted source for news from Dominica and around the world
-            </p>
-            <p className="text-primary-foreground/60 text-xs mt-4">
-              © 2025 Dominica News. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

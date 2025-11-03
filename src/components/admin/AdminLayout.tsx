@@ -15,6 +15,7 @@ import {
   User,
   AlertTriangle,
   Globe,
+  Settings,
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -52,6 +53,11 @@ const adminNavItems = [
     label: 'Images',
     path: '/admin/images',
     icon: Image,
+  },
+  {
+    label: 'Settings',
+    path: '/admin/settings',
+    icon: Settings,
   },
 ];
 

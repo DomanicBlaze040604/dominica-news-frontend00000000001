@@ -22,10 +22,12 @@ const AdminAuthors = lazy(() => import("./pages/admin/AdminAuthors").then(m => (
 const AdminStaticPages = lazy(() => import("./pages/admin/AdminStaticPages").then(m => ({ default: m.AdminStaticPages })));
 const AdminBreakingNews = lazy(() => import("./pages/admin/AdminBreakingNews").then(m => ({ default: m.AdminBreakingNews })));
 const AdminImages = lazy(() => import("./pages/admin/AdminImages").then(m => ({ default: m.AdminImages })));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 
 // Lazy load public pages
 const CategoryPage = lazy(() => import("./pages/CategoryPage"));
 const ArticlePage = lazy(() => import("./pages/ArticlePage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -99,6 +101,13 @@ const App = () => (
                 </Suspense>
               } />
               
+              {/* Contact page */}
+              <Route path="/contact" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ContactPage />
+                </Suspense>
+              } />
+              
               {/* Admin routes */}
               <Route
                 path="/admin"
@@ -153,6 +162,11 @@ const App = () => (
                 <Route path="images" element={
                   <Suspense fallback={<LoadingSpinner />}>
                     <AdminImages />
+                  </Suspense>
+                } />
+                <Route path="settings" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminSettings />
                   </Suspense>
                 } />
               </Route>

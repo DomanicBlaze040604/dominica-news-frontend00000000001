@@ -11,6 +11,8 @@ import { categoriesService } from "../services/categories";
 import { useSiteSetting } from "../hooks/useSiteSettings";
 import FeaturedSectionCards from "../components/FeaturedSectionCards";
 import FeaturedSectionSingle from "../components/FeaturedSectionSingle";
+import { Footer } from "../components/layout/Footer";
+import { Header } from "../components/layout/Header";
 import { Search, X } from "lucide-react";
 
 const Index = () => {
@@ -91,7 +93,9 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* SEO Meta Tags for Homepage */}
       <MetaTags />
-      <Navbar />
+      <Header>
+        <Navbar />
+      </Header>
       
       <main className="container mx-auto px-4 py-8">
         {/* Search Section */}
@@ -332,20 +336,7 @@ const Index = () => {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-primary text-primary-foreground mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2">DOMINICA NEWS</h3>
-            <p className="text-primary-foreground/80 text-sm">
-              Your trusted source for news from Dominica and around the world
-            </p>
-            <p className="text-primary-foreground/60 text-xs mt-4">
-              © 2025 Dominica News. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
