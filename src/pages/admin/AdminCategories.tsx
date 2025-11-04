@@ -43,13 +43,13 @@ export const AdminCategories: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch categories
+  // Fetch categories using admin endpoint
   const { data: categoriesData, isLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoriesService.getCategories,
+    queryKey: ['admin-categories'],
+    queryFn: categoriesService.getAdminCategories,
   });
 
-  const categories = categoriesData?.data.categories || [];
+  const categories = categoriesData?.data || [];
 
   // Form setup
   const form = useForm<CategoryFormData>({
@@ -66,7 +66,8 @@ export const AdminCategories: React.FC = () => {
     mutationFn: categoriesService.createCategory,
     onSuccess: () => {
       toast.success('Category created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Also invalidate public categories
       setIsDialogOpen(false);
       form.reset();
     },
@@ -81,7 +82,8 @@ export const AdminCategories: React.FC = () => {
       categoriesService.updateCategory(id, data),
     onSuccess: () => {
       toast.success('Category updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Also invalidate public categories
       setIsDialogOpen(false);
       setEditingCategory(null);
       form.reset();
@@ -96,7 +98,8 @@ export const AdminCategories: React.FC = () => {
     mutationFn: categoriesService.deleteCategory,
     onSuccess: () => {
       toast.success('Category deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Also invalidate public categories
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to delete category');

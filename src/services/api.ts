@@ -1,17 +1,15 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { toast } from 'sonner';
-
-// API base URL - can be configured via environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-af44.up.railway.app/api';
+import { config, shouldLog } from '../config/environment';
 
 // Retry configuration
 let retryCount = 0;
 const maxRetries = 3;
 
-// Create axios instance
+// Create axios instance with environment-aware configuration
 const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 15000, // Increased timeout
+  baseURL: config.apiBaseUrl,
+  timeout: config.apiTimeout,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +24,7 @@ apiClient.interceptors.request.use(
     }
     
     // Add request timestamp for debugging
-    (config as any).metadata = { startTime: new Date() };
+    (config as AxiosRequestConfig & { metadata?: { startTime: Date } }).metadata = { startTime: new Date() };
     
     return config;
   },
@@ -39,9 +37,10 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle common errors and retries
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Log successful requests in development
-    if (process.env.NODE_ENV === 'development') {
-      const duration = new Date().getTime() - (response.config as any).metadata?.startTime?.getTime();
+    // Log successful requests based on configuration
+    if (config.logging.enableConsole && shouldLog('debug')) {
+      const requestConfig = response.config as AxiosRequestConfig & { metadata?: { startTime: Date } };
+      const duration = new Date().getTime() - (requestConfig.metadata?.startTime?.getTime() || 0);
       console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status} (${duration}ms)`);
     }
     
@@ -50,10 +49,10 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as any;
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
     
-    // Log errors in development
-    if (process.env.NODE_ENV === 'development') {
+    // Log errors based on configuration
+    if (config.logging.enableConsole && shouldLog('error')) {
       console.error(`❌ ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} - ${error.response?.status || 'Network Error'}`);
     }
 
@@ -127,19 +126,19 @@ apiClient.interceptors.response.use(
 
 // Generic API methods
 export const api = {
-  get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
     apiClient.get(url, config),
   
-  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
     apiClient.post(url, data, config),
   
-  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
     apiClient.put(url, data, config),
   
-  delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
     apiClient.delete(url, config),
   
-  patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
     apiClient.patch(url, data, config),
 };
 

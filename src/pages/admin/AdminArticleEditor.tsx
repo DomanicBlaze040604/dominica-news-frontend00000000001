@@ -62,14 +62,14 @@ export const AdminArticleEditor: React.FC = () => {
 
   // Fetch categories
   const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoriesService.getCategories,
+    queryKey: ['admin-categories'],
+    queryFn: categoriesService.getAdminCategories,
   });
 
   // Fetch authors
   const { data: authorsData } = useQuery({
-    queryKey: ['authors'],
-    queryFn: authorsService.getAuthors,
+    queryKey: ['admin-authors'],
+    queryFn: authorsService.getAdminAuthors,
   });
 
   const form = useForm<ArticleFormData>({
@@ -195,7 +195,7 @@ export const AdminArticleEditor: React.FC = () => {
   };
 
   const isLoading = isLoadingArticle || createMutation.isPending || updateMutation.isPending;
-  const categories = categoriesData?.data.categories || [];
+  const categories = categoriesData?.data || [];
   const authors = authorsData?.data.authors || [];
   const currentStatus = form.watch('status');
   const isPinnedValue = form.watch('isPinned');

@@ -42,8 +42,8 @@ export const AdminArticles: React.FC = () => {
 
   // Fetch categories for display
   const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoriesService.getCategories,
+    queryKey: ['admin-categories'],
+    queryFn: categoriesService.getAdminCategories,
   });
 
   const articles = articlesData?.data.articles || [];

@@ -19,6 +19,11 @@ export const categoriesService = {
   },
 
   // Admin endpoints
+  getAdminCategories: async (): Promise<ApiResponse<Category[]>> => {
+    const response = await api.get<ApiResponse<Category[]>>('/admin/categories');
+    return response.data;
+  },
+
   createCategory: async (categoryData: CategoryFormData): Promise<ApiResponse<{ category: Category }>> => {
     const response = await api.post<ApiResponse<{ category: Category }>>('/admin/categories', categoryData);
     return response.data;

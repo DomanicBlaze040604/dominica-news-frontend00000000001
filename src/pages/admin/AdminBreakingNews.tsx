@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,90 +10,87 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 import { breakingNewsService } from '../../services/breakingNews';
 import { BreakingNews, BreakingNewsFormData } from '../../types/api';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export const AdminBreakingNews: React.FC = () => {
-  const [breakingNews, setBreakingNews] = useState<BreakingNews[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<BreakingNewsFormData>({
     text: '',
     isActive: false,
   });
-  const [submitting, setSubmitting] = useState(false);
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchBreakingNews();
-  }, []);
+  // Fetch breaking news using React Query
+  const { data: breakingNewsData, isLoading } = useQuery({
+    queryKey: ['admin-breaking-news'],
+    queryFn: () => breakingNewsService.getAll(),
+  });
 
-  const fetchBreakingNews = async () => {
-    try {
-      setLoading(true);
-      const response = await breakingNewsService.getAll();
-      setBreakingNews(response.breakingNews || []);
-    } catch (error) {
-      console.error('Error fetching breaking news:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch breaking news',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const breakingNews = breakingNewsData?.breakingNews || [];
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: breakingNewsService.create,
+    onSuccess: () => {
+      toast.success('Breaking news created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-breaking-news'] });
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] }); // Also invalidate public
+      setShowForm(false);
+      setFormData({ text: '', isActive: false });
+    },
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
+      toast.error(error.response?.data?.error || 'Failed to create breaking news');
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<BreakingNewsFormData> }) =>
+      breakingNewsService.update(id, data),
+    onSuccess: () => {
+      toast.success('Breaking news updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-breaking-news'] });
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] }); // Also invalidate public
+      setShowForm(false);
+      setEditingId(null);
+      setFormData({ text: '', isActive: false });
+    },
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
+      toast.error(error.response?.data?.error || 'Failed to update breaking news');
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: breakingNewsService.delete,
+    onSuccess: () => {
+      toast.success('Breaking news deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-breaking-news'] });
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] }); // Also invalidate public
+    },
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
+      toast.error(error.response?.data?.error || 'Failed to delete breaking news');
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.text.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Breaking news text is required',
-        variant: 'destructive',
-      });
+      toast.error('Breaking news text is required');
       return;
     }
 
     if (formData.text.length > 200) {
-      toast({
-        title: 'Error',
-        description: 'Breaking news text cannot exceed 200 characters',
-        variant: 'destructive',
-      });
+      toast.error('Breaking news text cannot exceed 200 characters');
       return;
     }
 
-    try {
-      setSubmitting(true);
-      
-      if (editingId) {
-        await breakingNewsService.update(editingId, formData);
-        toast({
-          title: 'Success',
-          description: 'Breaking news updated successfully',
-        });
-      } else {
-        await breakingNewsService.create(formData);
-        toast({
-          title: 'Success',
-          description: 'Breaking news created successfully',
-        });
-      }
-      
-      resetForm();
-      fetchBreakingNews();
-    } catch (error) {
-      console.error('Error saving breaking news:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save breaking news',
-        variant: 'destructive',
-      });
-    } finally {
-      setSubmitting(false);
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data: formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
@@ -105,25 +103,9 @@ export const AdminBreakingNews: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to deactivate this breaking news?')) {
-      return;
-    }
-
-    try {
-      await breakingNewsService.delete(id);
-      toast({
-        title: 'Success',
-        description: 'Breaking news deactivated successfully',
-      });
-      fetchBreakingNews();
-    } catch (error) {
-      console.error('Error deleting breaking news:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to deactivate breaking news',
-        variant: 'destructive',
-      });
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this breaking news? This action cannot be undone.')) {
+      deleteMutation.mutate(id);
     }
   };
 
@@ -136,7 +118,7 @@ export const AdminBreakingNews: React.FC = () => {
   const characterCount = formData.text.length;
   const isOverLimit = characterCount > 200;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -229,11 +211,11 @@ export const AdminBreakingNews: React.FC = () => {
               <div className="flex gap-2">
                 <Button
                   type="submit"
-                  disabled={submitting || !formData.text.trim() || isOverLimit}
+                  disabled={createMutation.isPending || updateMutation.isPending || !formData.text.trim() || isOverLimit}
                   className="flex items-center gap-2"
                 >
                   <Save className="h-4 w-4" />
-                  {submitting ? 'Saving...' : editingId ? 'Update' : 'Create'}
+                  {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editingId ? 'Update' : 'Create'}
                 </Button>
                 <Button
                   type="button"

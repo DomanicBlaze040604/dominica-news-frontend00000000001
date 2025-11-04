@@ -25,9 +25,40 @@ export const SocialMediaLinks: React.FC<SocialMediaLinksProps> = ({
   variant = 'ghost',
   showLabels = false,
 }) => {
-  // Get social media settings
+  // Get social media settings using hooks at the top level
+  const facebookData = useSiteSetting('social_facebook');
+  const twitterData = useSiteSetting('social_twitter');
+  const instagramData = useSiteSetting('social_instagram');
+  const youtubeData = useSiteSetting('social_youtube');
+  const linkedinData = useSiteSetting('social_linkedin');
+  const tiktokData = useSiteSetting('social_tiktok');
+
+  // Map the data to social links
   const socialLinks = socialPlatforms.map(platform => {
-    const { data: settingData } = useSiteSetting(`social_${platform.key}`);
+    let settingData;
+    switch (platform.key) {
+      case 'facebook':
+        settingData = facebookData.data;
+        break;
+      case 'twitter':
+        settingData = twitterData.data;
+        break;
+      case 'instagram':
+        settingData = instagramData.data;
+        break;
+      case 'youtube':
+        settingData = youtubeData.data;
+        break;
+      case 'linkedin':
+        settingData = linkedinData.data;
+        break;
+      case 'tiktok':
+        settingData = tiktokData.data;
+        break;
+      default:
+        settingData = null;
+    }
+    
     return {
       ...platform,
       url: settingData?.data?.value || '',

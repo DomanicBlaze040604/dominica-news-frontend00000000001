@@ -5,34 +5,78 @@ import { articlesService } from '../../services/articles';
 import { categoriesService } from '../../services/categories';
 import { imagesService } from '../../services/images';
 import { TestConnection } from '../../components/TestConnection';
-import { FileText, FolderOpen, Image, TrendingUp } from 'lucide-react';
+import { AdminErrorFallback } from '../../components/ErrorFallbacks';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { FileText, FolderOpen, Image, TrendingUp, AlertTriangle } from 'lucide-react';
 
-export const AdminDashboard: React.FC = () => {
+const AdminDashboardContent: React.FC = () => {
   // Fetch dashboard statistics using admin endpoints
-  const { data: articlesData } = useQuery({
+  const { data: articlesData, error: articlesError, isLoading: articlesLoading } = useQuery({
     queryKey: ['admin-articles', { page: 1, limit: 1 }],
     queryFn: () => articlesService.getAdminArticles({ page: 1, limit: 1 }),
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoriesService.getCategories,
+  // Debug logging
+  React.useEffect(() => {
+    if (articlesData) {
+      console.log('📰 Articles Data:', articlesData);
+    }
+    if (articlesError) {
+      console.error('❌ Articles Error:', articlesError);
+    }
+  }, [articlesData, articlesError]);
+
+  const { data: categoriesData, error: categoriesError, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['admin-categories'],
+    queryFn: categoriesService.getAdminCategories,
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  const { data: imagesData } = useQuery({
+  // Debug logging
+  React.useEffect(() => {
+    if (categoriesData) {
+      console.log('📊 Categories Data:', categoriesData);
+    }
+    if (categoriesError) {
+      console.error('❌ Categories Error:', categoriesError);
+    }
+  }, [categoriesData, categoriesError]);
+
+  const { data: imagesData, isLoading: imagesLoading } = useQuery({
     queryKey: ['admin-images', { page: 1, limit: 1 }],
     queryFn: () => imagesService.getImages({ page: 1, limit: 1 }),
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  const { data: publishedArticlesData } = useQuery({
+  const { data: publishedArticlesData, isLoading: publishedLoading } = useQuery({
     queryKey: ['admin-articles', { page: 1, limit: 1, status: 'published' }],
     queryFn: () => articlesService.getAdminArticles({ page: 1, limit: 1, status: 'published' }),
+    retry: 2,
+    retryDelay: 1000,
   });
+
+  // Check for critical errors
+  const hasErrors = articlesError || categoriesError;
+  const isLoading = articlesLoading || categoriesLoading || imagesLoading || publishedLoading;
+
+  if (hasErrors) {
+    return (
+      <AdminErrorFallback
+        feature="dashboard"
+        onRetry={() => window.location.reload()}
+        onGoHome={() => window.location.href = '/admin'}
+      />
+    );
+  }
 
   const stats = [
     {
       title: 'Total Articles',
-      value: articlesData?.data?.length || 0,
+      value: articlesData?.data?.pagination?.totalArticles || 0,
       description: 'All articles in the system',
       icon: FileText,
       color: 'text-blue-600',
@@ -40,7 +84,7 @@ export const AdminDashboard: React.FC = () => {
     },
     {
       title: 'Published Articles',
-      value: publishedArticlesData?.data?.length || 0,
+      value: publishedArticlesData?.data?.pagination?.totalArticles || 0,
       description: 'Articles visible to readers',
       icon: TrendingUp,
       color: 'text-green-600',
@@ -89,7 +133,13 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-2xl font-bold">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                  ) : (
+                    stat.value
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {stat.description}
                 </p>
@@ -161,5 +211,21 @@ export const AdminDashboard: React.FC = () => {
         <TestConnection />
       </div>
     </div>
+  );
+};
+
+export const AdminDashboard: React.FC = () => {
+  return (
+    <ErrorBoundary
+      fallback={
+        <AdminErrorFallback
+          feature="dashboard"
+          onRetry={() => window.location.reload()}
+          onGoHome={() => window.location.href = '/admin'}
+        />
+      }
+    >
+      <AdminDashboardContent />
+    </ErrorBoundary>
   );
 };
