@@ -8,10 +8,10 @@ import { TestConnection } from '../../components/TestConnection';
 import { FileText, FolderOpen, Image, TrendingUp } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  // Fetch dashboard statistics
+  // Fetch dashboard statistics using public endpoints
   const { data: articlesData } = useQuery({
-    queryKey: ['admin-articles', { page: 1, limit: 1 }],
-    queryFn: () => articlesService.getAdminArticles({ page: 1, limit: 1 }),
+    queryKey: ['articles', { page: 1, limit: 1 }],
+    queryFn: () => articlesService.getPublishedArticles({ page: 1, limit: 1 }),
   });
 
   const { data: categoriesData } = useQuery({
@@ -19,20 +19,16 @@ export const AdminDashboard: React.FC = () => {
     queryFn: categoriesService.getCategories,
   });
 
-  const { data: imagesData } = useQuery({
-    queryKey: ['admin-images', { page: 1, limit: 1 }],
-    queryFn: () => imagesService.getImages({ page: 1, limit: 1 }),
-  });
+  // For now, we'll skip images since the endpoint doesn't exist
+  const imagesData = { data: { pagination: { totalImages: 0 } } };
 
-  const { data: publishedArticlesData } = useQuery({
-    queryKey: ['admin-articles', { page: 1, limit: 1, status: 'published' }],
-    queryFn: () => articlesService.getAdminArticles({ page: 1, limit: 1, status: 'published' }),
-  });
+  // Use the same articles data for published count
+  const publishedArticlesData = articlesData;
 
   const stats = [
     {
       title: 'Total Articles',
-      value: articlesData?.data.pagination.totalArticles || 0,
+      value: articlesData?.data?.length || 0,
       description: 'All articles in the system',
       icon: FileText,
       color: 'text-blue-600',
@@ -40,7 +36,7 @@ export const AdminDashboard: React.FC = () => {
     },
     {
       title: 'Published Articles',
-      value: publishedArticlesData?.data.pagination.totalArticles || 0,
+      value: publishedArticlesData?.data?.length || 0,
       description: 'Articles visible to readers',
       icon: TrendingUp,
       color: 'text-green-600',
@@ -48,7 +44,7 @@ export const AdminDashboard: React.FC = () => {
     },
     {
       title: 'Categories',
-      value: categoriesData?.data.count || 0,
+      value: categoriesData?.data?.length || 0,
       description: 'Content categories',
       icon: FolderOpen,
       color: 'text-purple-600',
@@ -56,7 +52,7 @@ export const AdminDashboard: React.FC = () => {
     },
     {
       title: 'Images',
-      value: imagesData?.data.pagination.totalImages || 0,
+      value: 0, // Images endpoint not available yet
       description: 'Uploaded media files',
       icon: Image,
       color: 'text-orange-600',

@@ -54,9 +54,9 @@ const Index = () => {
   // Fetch featured section layout setting
   const { data: layoutSetting } = useSiteSetting('featured_section_layout');
 
-  const pinnedArticles = pinnedData?.data?.articles || [];
-  const latestArticles = (latestData as any)?.data?.articles || [];
-  const categories = categoriesData?.data?.categories || [];
+  const pinnedArticles = pinnedData?.data?.articles || pinnedData?.data || [];
+  const latestArticles = (latestData as any)?.data?.articles || (latestData as any)?.data || [];
+  const categories = categoriesData?.data?.categories || categoriesData?.data || [];
   const pagination = (latestData as any)?.data?.pagination;
   
   // Determine layout type - default to 'single' if not set
