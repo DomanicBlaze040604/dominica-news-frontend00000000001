@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } f
 import { toast } from 'sonner';
 
 // API base URL - can be configured via environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-af44.up.railway.app/api';
 
 // Retry configuration
 let retryCount = 0;

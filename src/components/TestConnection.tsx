@@ -21,7 +21,7 @@ export const TestConnection: React.FC = () => {
     
     try {
       // Test articles endpoint
-      const response = await fetch('http://localhost:8080/api/articles');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://web-production-af44.up.railway.app/api'}/articles`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -112,7 +112,7 @@ export const TestConnection: React.FC = () => {
         </div>
 
         <div className="text-xs text-muted-foreground space-y-1">
-          <p><strong>Expected Backend URL:</strong> http://localhost:8080/api</p>
+          <p><strong>Backend URL:</strong> {import.meta.env.VITE_API_URL || 'https://web-production-af44.up.railway.app/api'}</p>
           <p><strong>Test Endpoint:</strong> /articles</p>
           <p><strong>Admin Login:</strong> admin@dominicanews.com / Pass@12345</p>
         </div>
