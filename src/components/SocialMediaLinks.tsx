@@ -26,34 +26,34 @@ export const SocialMediaLinks: React.FC<SocialMediaLinksProps> = ({
   showLabels = false,
 }) => {
   // Get social media settings using hooks at the top level
-  const facebookData = useSiteSetting('social_facebook');
-  const twitterData = useSiteSetting('social_twitter');
-  const instagramData = useSiteSetting('social_instagram');
-  const youtubeData = useSiteSetting('social_youtube');
-  const linkedinData = useSiteSetting('social_linkedin');
-  const tiktokData = useSiteSetting('social_tiktok');
+  const { data: facebookData } = useSiteSetting('social_facebook');
+  const { data: twitterData } = useSiteSetting('social_twitter');
+  const { data: instagramData } = useSiteSetting('social_instagram');
+  const { data: youtubeData } = useSiteSetting('social_youtube');
+  const { data: linkedinData } = useSiteSetting('social_linkedin');
+  const { data: tiktokData } = useSiteSetting('social_tiktok');
 
   // Map the data to social links
   const socialLinks = socialPlatforms.map(platform => {
     let settingData;
     switch (platform.key) {
       case 'facebook':
-        settingData = facebookData.data;
+        settingData = facebookData;
         break;
       case 'twitter':
-        settingData = twitterData.data;
+        settingData = twitterData;
         break;
       case 'instagram':
-        settingData = instagramData.data;
+        settingData = instagramData;
         break;
       case 'youtube':
-        settingData = youtubeData.data;
+        settingData = youtubeData;
         break;
       case 'linkedin':
-        settingData = linkedinData.data;
+        settingData = linkedinData;
         break;
       case 'tiktok':
-        settingData = tiktokData.data;
+        settingData = tiktokData;
         break;
       default:
         settingData = null;
@@ -61,7 +61,7 @@ export const SocialMediaLinks: React.FC<SocialMediaLinksProps> = ({
     
     return {
       ...platform,
-      url: settingData?.data?.value || '',
+      url: settingData?.value || '',
     };
   }).filter(link => link.url); // Only show platforms with URLs
 

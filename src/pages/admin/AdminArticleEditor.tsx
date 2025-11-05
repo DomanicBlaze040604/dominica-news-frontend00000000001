@@ -19,6 +19,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { DragDropImageUpload } from '@/components/admin/DragDropImageUpload';
 import { RichTextEditor } from '@/components/admin/RichTextEditor';
+import { SlugInput } from '@/components/admin/SlugInput';
 import { articlesService } from '../../services/articles';
 import { categoriesService } from '../../services/categories';
 import { authorsService } from '../../services/authors';
@@ -29,6 +30,7 @@ import { formatForDateTimeInput, parseLocalTimeToUTC, getCurrentLocalTime } from
 
 const articleSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
+  slug: z.string().min(1, 'Slug is required'),
   excerpt: z.string().optional(),
   content: z.string().min(50, 'Content must be at least 50 characters'),
   featuredImage: z.string().optional(),
@@ -76,6 +78,7 @@ export const AdminArticleEditor: React.FC = () => {
     resolver: zodResolver(articleSchema),
     defaultValues: {
       title: '',
+      slug: '',
       excerpt: '',
       content: '',
       featuredImage: '',
@@ -96,6 +99,7 @@ export const AdminArticleEditor: React.FC = () => {
       const article = articleData.data.article;
       form.reset({
         title: article.title,
+        slug: article.slug || '',
         excerpt: article.excerpt || '',
         content: article.content,
         featuredImage: article.featuredImage || '',
@@ -115,35 +119,99 @@ export const AdminArticleEditor: React.FC = () => {
   // Create article mutation
   const createMutation = useMutation({
     mutationFn: articlesService.createArticle,
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast.success('Article created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
       queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
+      
+      // Navigate to the created article or back to list
+      if (response.data.article?.slug) {
+        toast.success(`Article "${response.data.article.title}" created successfully!`);
+      }
       navigate('/admin/articles');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to create article');
+      console.error('Create article error:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Failed to create article';
+      toast.error(errorMessage);
+      
+      // Handle specific validation errors
+      if (error.response?.status === 400) {
+        const validationErrors = error.response?.data?.errors;
+        if (validationErrors) {
+          Object.keys(validationErrors).forEach(field => {
+            toast.error(`${field}: ${validationErrors[field]}`);
+          });
+        }
+      }
     },
   });
 
   // Update article mutation
   const updateMutation = useMutation({
     mutationFn: (data: ApiArticleFormData) => articlesService.updateArticle(id!, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast.success('Article updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
       queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
+      queryClient.invalidateQueries({ queryKey: ['article', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-article', id] });
+      
+      if (response.data.article?.title) {
+        toast.success(`Article "${response.data.article.title}" updated successfully!`);
+      }
       navigate('/admin/articles');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update article');
+      console.error('Update article error:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Failed to update article';
+      toast.error(errorMessage);
+      
+      // Handle specific validation errors
+      if (error.response?.status === 400) {
+        const validationErrors = error.response?.data?.errors;
+        if (validationErrors) {
+          Object.keys(validationErrors).forEach(field => {
+            toast.error(`${field}: ${validationErrors[field]}`);
+          });
+        }
+      }
+      
+      // Handle slug conflicts
+      if (error.response?.status === 409) {
+        toast.error('Article slug already exists. Please choose a different slug.');
+      }
     },
   });
 
   const onSubmit = (data: ArticleFormData) => {
+    // Additional validation
+    if (!data.slug.trim()) {
+      toast.error('Article slug is required');
+      return;
+    }
+
+    if (!data.categoryId) {
+      toast.error('Please select a category');
+      return;
+    }
+
+    if (!data.authorId) {
+      toast.error('Please select an author');
+      return;
+    }
+
     // Use uploaded image URL if available, otherwise use the form value
     const submitData: ApiArticleFormData = {
-      title: data.title,
-      excerpt: data.excerpt,
+      title: data.title.trim(),
+      slug: data.slug.trim(),
+      excerpt: data.excerpt?.trim() || '',
       content: data.content,
       featuredImage: uploadedImage?.urls?.medium || data.featuredImage || '',
       featuredImageAlt: imageAltText || data.featuredImageAlt || '',
@@ -151,9 +219,9 @@ export const AdminArticleEditor: React.FC = () => {
       authorId: data.authorId,
       status: data.status,
       scheduledAt: data.scheduledAt ? parseLocalTimeToUTC(data.scheduledAt).toISOString() : undefined,
-      isPinned: data.isPinned,
-      seoTitle: data.seoTitle,
-      seoDescription: data.seoDescription,
+      isPinned: data.isPinned || false,
+      seoTitle: data.seoTitle?.trim() || '',
+      seoDescription: data.seoDescription?.trim() || '',
     };
 
     // Validate scheduled date if status is scheduled
@@ -167,6 +235,23 @@ export const AdminArticleEditor: React.FC = () => {
         toast.error('Scheduled date must be in the future');
         return;
       }
+    }
+
+    // Validate content length
+    if (data.content.length < 50) {
+      toast.error('Article content must be at least 50 characters long');
+      return;
+    }
+
+    // Validate SEO fields if provided
+    if (data.seoTitle && data.seoTitle.length > 60) {
+      toast.error('SEO title cannot exceed 60 characters');
+      return;
+    }
+
+    if (data.seoDescription && data.seoDescription.length > 160) {
+      toast.error('SEO description cannot exceed 160 characters');
+      return;
     }
 
     if (isEditing) {
@@ -283,6 +368,24 @@ export const AdminArticleEditor: React.FC = () => {
                 </div>
 
                 <div>
+                  <SlugInput
+                    title={form.watch('title')}
+                    slug={form.watch('slug')}
+                    onSlugChange={(slug) => form.setValue('slug', slug)}
+                    type="article"
+                    excludeId={isEditing ? id : undefined}
+                    disabled={isLoading}
+                    label="Article URL Slug"
+                    placeholder="article-url-slug"
+                  />
+                  {form.formState.errors.slug && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {form.formState.errors.slug.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
                   <Label htmlFor="excerpt">Excerpt (Optional)</Label>
                   <Textarea
                     id="excerpt"
@@ -352,8 +455,11 @@ export const AdminArticleEditor: React.FC = () => {
                     <RichTextEditor
                       value={form.watch('content')}
                       onChange={(value) => form.setValue('content', value)}
-                      placeholder="Write your article content here... Use the toolbar above for formatting options like bold, italic, headings, and more."
+                      placeholder="Write your article content here... Use the toolbar above for formatting options like bold, italic, headings, and more. You can also drag and drop images directly into the editor."
                       height="500px"
+                      enableImageUpload={true}
+                      enableDragDrop={true}
+                      enableGalleryPicker={true}
                     />
                   )}
                   

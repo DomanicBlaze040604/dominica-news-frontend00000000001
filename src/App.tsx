@@ -3,11 +3,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./hooks/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { lazy, Suspense, useEffect } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BreakingNewsTicker } from "./components/BreakingNewsTicker";
+import { GlobalSEO } from "./components/GlobalSEO";
+import { MaintenanceWrapper } from "./components/MaintenanceWrapper";
 import { initializeApp, setupGracefulShutdown } from "./utils/appInitialization";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -24,11 +27,14 @@ const AdminStaticPages = lazy(() => import("./pages/admin/AdminStaticPages").the
 const AdminBreakingNews = lazy(() => import("./pages/admin/AdminBreakingNews").then(m => ({ default: m.AdminBreakingNews })));
 const AdminImages = lazy(() => import("./pages/admin/AdminImages").then(m => ({ default: m.AdminImages })));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers").then(m => ({ default: m.AdminUsers })));
+const UserProfile = lazy(() => import("./components/admin/UserProfile").then(m => ({ default: m.UserProfile })));
 
 // Lazy load public pages
 const CategoryPage = lazy(() => import("./pages/CategoryPage"));
 const ArticlePage = lazy(() => import("./pages/ArticlePage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
+const StaticPageDisplay = lazy(() => import("./pages/StaticPageDisplay"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -62,13 +68,16 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BreakingNewsTicker />
-            <BrowserRouter>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <GlobalSEO />
+              <MaintenanceWrapper>
+              <BreakingNewsTicker />
+              <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -113,6 +122,35 @@ const App = () => {
               <Route path="/contact" element={
                 <Suspense fallback={<LoadingSpinner />}>
                   <ContactPage />
+                </Suspense>
+              } />
+              
+              {/* Static pages */}
+              <Route path="/about" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <StaticPageDisplay />
+                </Suspense>
+              } />
+              <Route path="/privacy" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <StaticPageDisplay />
+                </Suspense>
+              } />
+              <Route path="/terms" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <StaticPageDisplay />
+                </Suspense>
+              } />
+              <Route path="/editorial-team" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <StaticPageDisplay />
+                </Suspense>
+              } />
+              
+              {/* Dynamic static page route */}
+              <Route path="/pages/:slug" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <StaticPageDisplay />
                 </Suspense>
               } />
               
@@ -177,16 +215,28 @@ const App = () => {
                     <AdminSettings />
                   </Suspense>
                 } />
+                <Route path="users" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminUsers />
+                  </Suspense>
+                } />
+                <Route path="profile" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <UserProfile />
+                  </Suspense>
+                } />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
+              </BrowserRouter>
+            </MaintenanceWrapper>
+            </TooltipProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 };
 

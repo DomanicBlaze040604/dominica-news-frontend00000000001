@@ -16,6 +16,7 @@ const seoSchema = z.object({
   metaDescription: z.string().max(160, 'Meta description should not exceed 160 characters').optional(),
   keywords: z.string().optional(),
   ogImage: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+  canonicalUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
 });
 
 type SEOFormData = z.infer<typeof seoSchema>;
@@ -32,6 +33,7 @@ export const SEOSettings: React.FC = () => {
       metaDescription: '',
       keywords: '',
       ogImage: '',
+      canonicalUrl: '',
     },
   });
 
@@ -49,6 +51,7 @@ export const SEOSettings: React.FC = () => {
         metaDescription: settings.find(s => s.key === 'seo_meta_description')?.value || '',
         keywords: settings.find(s => s.key === 'seo_keywords')?.value || '',
         ogImage: settings.find(s => s.key === 'seo_og_image')?.value || '',
+        canonicalUrl: settings.find(s => s.key === 'seo_canonical_url')?.value || '',
       };
       
       form.reset(seoSettings);
@@ -79,6 +82,11 @@ export const SEOSettings: React.FC = () => {
           key: 'seo_og_image',
           value: data.ogImage || '',
           description: 'Default Open Graph image URL',
+        }),
+        updateSetting.mutateAsync({
+          key: 'seo_canonical_url',
+          value: data.canonicalUrl || '',
+          description: 'Default canonical URL for the website',
         }),
       ];
 
@@ -203,6 +211,27 @@ export const SEOSettings: React.FC = () => {
             {form.formState.errors.ogImage && (
               <p className="text-sm text-red-500">
                 {form.formState.errors.ogImage.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="canonicalUrl" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Canonical URL
+            </Label>
+            <Input
+              id="canonicalUrl"
+              type="url"
+              placeholder="https://dominicanews.com"
+              {...form.register('canonicalUrl')}
+            />
+            <p className="text-xs text-muted-foreground">
+              The preferred URL for your website. This helps prevent duplicate content issues.
+            </p>
+            {form.formState.errors.canonicalUrl && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.canonicalUrl.message}
               </p>
             )}
           </div>

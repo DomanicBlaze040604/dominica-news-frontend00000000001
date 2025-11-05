@@ -35,6 +35,8 @@ export interface Category {
   slug: string;
   description?: string;
   displayOrder: number;
+  color?: string;
+  icon?: string;
   articleCount?: number;
   createdAt: string;
 }
@@ -43,11 +45,27 @@ export interface Category {
 export interface Author {
   id: string;
   name: string;
+  slug: string;
   role: string;
   biography?: string;
   profileImage?: string;
   email: string;
+  title?: string;
+  professionalBackground?: string;
+  expertise?: string[];
+  specialization?: string[];
+  socialMedia?: {
+    twitter?: string;
+    facebook?: string;
+    instagram?: string;
+    linkedin?: string;
+  };
+  location?: string;
+  phone?: string;
+  website?: string;
   isActive: boolean;
+  joinDate: string;
+  articlesCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,14 +79,27 @@ export interface Article {
   content: string;
   featuredImage?: string;
   featuredImageAlt?: string; // Alt text for featured image
+  gallery?: string[]; // Array of image URLs
   category: Category;
   author: Author;
   status: 'draft' | 'published' | 'scheduled';
   publishedAt?: string;
   scheduledAt?: string;
   isPinned: boolean;
+  isBreaking?: boolean;
+  isFeatured?: boolean;
+  tags: string[];
+  location?: string;
+  language?: string;
+  readingTime?: number;
   seoTitle?: string;
   seoDescription?: string;
+  seo?: {
+    metaTitle?: string;
+    metaDescription?: string;
+    keywords?: string[];
+    canonicalUrl?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +172,7 @@ export interface RegisterData {
 
 export interface ArticleFormData {
   title: string;
+  slug: string;
   excerpt?: string;
   content: string;
   featuredImage?: string;
@@ -156,8 +188,11 @@ export interface ArticleFormData {
 
 export interface CategoryFormData {
   name: string;
+  slug: string;
   description?: string;
   displayOrder?: number;
+  color?: string;
+  icon?: string;
 }
 
 // API response types

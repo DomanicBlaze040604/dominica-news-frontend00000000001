@@ -1,11 +1,12 @@
 import { api } from './api';
 import { BreakingNews, BreakingNewsFormData, ApiResponse } from '../types/api';
+import { withFallback, fallbackService } from './fallbackData';
 
 export const breakingNewsService = {
   // Get active breaking news (public)
   getActive: async (): Promise<BreakingNews | null> => {
     try {
-      const response = await api.get<ApiResponse<BreakingNews | null>>('/breaking-news');
+      const response = await api.get<ApiResponse<BreakingNews | null>>('/breaking-news/active');
       return response.data.data;
     } catch (error) {
       console.error('Error fetching active breaking news:', error);
@@ -15,10 +16,25 @@ export const breakingNewsService = {
 
   // Admin endpoints
   getAll: async (page = 1, limit = 10): Promise<{ breakingNews: BreakingNews[]; pagination: { currentPage: number; totalPages: number; totalItems: number; hasNextPage: boolean; hasPrevPage: boolean; limit: number } }> => {
-    const response = await api.get<ApiResponse<{ breakingNews: BreakingNews[]; pagination: { currentPage: number; totalPages: number; totalItems: number; hasNextPage: boolean; hasPrevPage: boolean; limit: number } }>>(
-      `/admin/breaking-news?page=${page}&limit=${limit}`
+    return withFallback(
+      async () => {
+        const response = await api.get<ApiResponse<{ breakingNews: BreakingNews[]; pagination: { currentPage: number; totalPages: number; totalItems: number; hasNextPage: boolean; hasPrevPage: boolean; limit: number } }>>(
+          `/admin/breaking-news?page=${page}&limit=${limit}`
+        );
+        return response.data.data;
+      },
+      () => fallbackService.getBreakingNews().then(result => ({
+        breakingNews: result.data.breakingNews,
+        pagination: {
+          currentPage: page,
+          totalPages: 1,
+          totalItems: result.data.breakingNews.length,
+          hasNextPage: false,
+          hasPrevPage: false,
+          limit,
+        }
+      }))
     );
-    return response.data.data;
   },
 
   create: async (data: BreakingNewsFormData): Promise<BreakingNews> => {
@@ -33,5 +49,10 @@ export const breakingNewsService = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/admin/breaking-news/${id}`);
+  },
+
+  toggleActive: async (id: string): Promise<BreakingNews> => {
+    const response = await api.patch<ApiResponse<BreakingNews>>(`/admin/breaking-news/${id}/toggle`);
+    return response.data.data;
   },
 };

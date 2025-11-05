@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "lucide-react";
+import { Calendar, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LazyImage } from "./LazyImage";
+import { AccessibleImage } from "./AccessibleImage";
+import { formatDominicanDateTime } from "@/utils/dateUtils";
 
 interface NewsCardProps {
   id: string;
@@ -35,23 +36,8 @@ const NewsCard = ({
   featured = false,
   animationDelay = 0 
 }: NewsCardProps) => {
-  // Format date and time
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const dateFormatted = date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-    const timeFormatted = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-    return { dateFormatted, timeFormatted };
-  };
-
-  const { dateFormatted, timeFormatted } = formatDateTime(date);
+  // Format date and time for Dominican timezone
+  const dominicanDateTime = formatDominicanDateTime(date);
   return (
     <Link 
       to={slug ? `/articles/${slug}` : `/news/${id}`} 
@@ -66,13 +52,19 @@ const NewsCard = ({
           "relative overflow-hidden bg-muted",
           featured ? "h-64 lg:h-80" : "h-48"
         )}>
-          <LazyImage
+          <AccessibleImage
             src={image}
             alt={imageAlt || title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            useIntersectionObserver={true}
-            threshold={0.1}
-            rootMargin="100px"
+            priority={featured}
+            variant={featured ? "large" : "medium"}
+            breakpoints={{
+              mobile: { width: 768, variant: "small" },
+              tablet: { width: 1024, variant: "medium" },
+              desktop: { width: 1920, variant: featured ? "large" : "medium" }
+            }}
+            showLoadingIndicator={true}
+            fetchPriority={featured ? "high" : "auto"}
           />
           <div className="absolute top-4 left-4 animate-scale-in" style={{ animationDelay: `${animationDelay + 200}ms` }}>
             <Badge className="bg-primary text-primary-foreground shadow-md">
@@ -82,40 +74,47 @@ const NewsCard = ({
           {/* Overlay gradient on hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-4">
           <h3 className={cn(
-            "font-headline font-bold leading-tight transition-colors duration-300",
-            "group-hover:text-primary",
-            featured ? "text-3xl font-extrabold" : "text-xl font-bold"
+            "font-headline font-black leading-tight transition-colors duration-300",
+            "group-hover:text-primary line-clamp-2",
+            featured ? "text-4xl font-black" : "text-2xl font-bold"
           )}>
             {title}
           </h3>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
+          <p className="article-excerpt mb-4 line-clamp-2">
             {excerpt}
           </p>
           
-          {/* Author Information */}
+          {/* Author Information - Enhanced styling */}
           {author && (
-            <div className="mb-2">
-              <p className="text-sm font-medium text-foreground/80">
-                By {author.name}
-              </p>
+            <div className="mb-4 pb-3 border-b border-border/50">
+              <div className="flex items-center gap-2 mb-1">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <p className="author-name text-foreground">
+                  {author.name}
+                </p>
+              </div>
               {author.role && (
-                <p className="text-xs text-muted-foreground font-light">
+                <p className="author-role ml-6">
                   {author.role}
                 </p>
               )}
             </div>
           )}
           
-          {/* Date and Time */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
+          {/* Publication Date and Time - Dominican timezone */}
+          <div className="flex items-start gap-2 text-muted-foreground">
+            <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
             <div className="flex flex-col">
-              <span className="font-medium">{dateFormatted}</span>
-              <span className="text-xs opacity-75">{timeFormatted}</span>
+              <span className="article-meta text-foreground/90">
+                Published on: {dominicanDateTime.date}
+              </span>
+              <span className="text-xs opacity-75 mt-0.5">
+                {dominicanDateTime.time}
+              </span>
             </div>
           </div>
         </CardContent>

@@ -8,9 +8,13 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isAdmin: boolean;
+  isEditor: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
+  changePassword: (data: { currentPassword: string; newPassword: string }) => Promise<void>;
+  updateProfile: (data: { fullName: string }) => Promise<void>;
   refetchUser: () => void;
 }
 
@@ -50,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       toast.success('Login successful!');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.error || 'Login failed. Please try again.';
+      const message = error.response?.data?.error || error.response?.data?.message || 'Login failed. Please try again.';
       toast.error(message);
     },
   });
@@ -89,6 +93,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       queryClient.clear();
       toast.success('Logged out successfully');
+    },
+  });
+
+  // Logout all devices mutation
+  const logoutAllMutation = useMutation({
+    mutationFn: authService.logoutAll,
+    onSuccess: () => {
+      tokenService.removeToken();
+      userService.removeUser();
+      setUser(null);
+      queryClient.clear();
+      toast.success('Logged out from all devices successfully');
+    },
+    onError: () => {
+      // Even if logout fails on server, clear local data
+      tokenService.removeToken();
+      userService.removeUser();
+      setUser(null);
+      queryClient.clear();
+      toast.success('Logged out from all devices successfully');
+    },
+  });
+
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: authService.changePassword,
+    onSuccess: () => {
+      // Clear tokens to force re-login
+      tokenService.removeToken();
+      userService.removeUser();
+      setUser(null);
+      queryClient.clear();
+      toast.success('Password changed successfully. Please log in again.');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.error || error.response?.data?.message || 'Failed to change password';
+      toast.error(message);
+    },
+  });
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: authService.updateProfile,
+    onSuccess: (data) => {
+      const updatedUser = data.data.user;
+      userService.setUser(updatedUser);
+      setUser(updatedUser);
+      queryClient.setQueryData(['currentUser'], { data: { user: updatedUser } });
+      toast.success('Profile updated successfully');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.error || error.response?.data?.message || 'Failed to update profile';
+      toast.error(message);
     },
   });
 
@@ -133,14 +190,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await logoutMutation.mutateAsync();
   };
 
+  const logoutAll = async (): Promise<void> => {
+    await logoutAllMutation.mutateAsync();
+  };
+
+  const changePassword = async (data: { currentPassword: string; newPassword: string }): Promise<void> => {
+    await changePasswordMutation.mutateAsync(data);
+  };
+
+  const updateProfile = async (data: { fullName: string }): Promise<void> => {
+    await updateProfileMutation.mutateAsync(data);
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading: !isInitialized || isUserLoading || loginMutation.isPending || registerMutation.isPending,
     isAdmin: user?.role === 'admin',
+    isEditor: user?.role === 'admin' || user?.role === 'editor',
     login,
     register,
     logout,
+    logoutAll,
+    changePassword,
+    updateProfile,
     refetchUser,
   };
 

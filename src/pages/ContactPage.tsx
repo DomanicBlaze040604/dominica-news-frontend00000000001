@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { useSiteSetting } from '../hooks/useSiteSettings';
 import { SocialMediaLinks } from '../components/SocialMediaLinks';
+import { api } from '../services/api';
+import { toast } from 'sonner';
 
 export const ContactPage: React.FC = () => {
   // Get contact settings
@@ -19,16 +22,55 @@ export const ContactPage: React.FC = () => {
   const { data: workingHoursData } = useSiteSetting('contact_workingHours');
   const { data: siteNameData } = useSiteSetting('site_name');
 
-  const contactEmail = contactEmailData?.data?.value;
-  const contactPhone = contactPhoneData?.data?.value;
-  const contactAddress = contactAddressData?.data?.value;
-  const workingHours = workingHoursData?.data?.value;
-  const siteName = siteNameData?.data?.value || 'Dominica News';
+  const contactEmail = contactEmailData?.value;
+  const contactPhone = contactPhoneData?.value;
+  const contactAddress = contactAddressData?.value;
+  const workingHours = workingHoursData?.value;
+  const siteName = siteNameData?.value || 'Dominica News';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Form state
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log('Contact form submitted');
+    setIsSubmitting(true);
+
+    try {
+      const response = await api.post('/settings/contact/submit', formData);
+      
+      if (response.data.success) {
+        setIsSubmitted(true);
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+        toast.success('Message sent successfully! We will get back to you soon.');
+      }
+    } catch (error: any) {
+      console.error('Error submitting contact form:', error);
+      toast.error(error.response?.data?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -157,52 +199,84 @@ export const ContactPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" placeholder="John" required />
+                {isSubmitted ? (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      Thank you for your message! We have received your inquiry and will get back to you as soon as possible.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input 
+                          id="firstName" 
+                          name="firstName"
+                          placeholder="John" 
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input 
+                          id="lastName" 
+                          name="lastName"
+                          placeholder="Doe" 
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required 
+                        />
+                      </div>
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" placeholder="Doe" required />
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        id="email" 
+                        name="email"
+                        type="email" 
+                        placeholder="john.doe@example.com" 
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required 
+                      />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="john.doe@example.com" 
-                      required 
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Subject</Label>
+                      <Input 
+                        id="subject" 
+                        name="subject"
+                        placeholder="What is this regarding?" 
+                        value={formData.subject}
+                        onChange={handleInputChange}
+                        required 
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Input 
-                      id="subject" 
-                      placeholder="What is this regarding?" 
-                      required 
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="message">Message</Label>
+                      <Textarea 
+                        id="message" 
+                        name="message"
+                        placeholder="Tell us more about your inquiry..."
+                        rows={6}
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        required 
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Message</Label>
-                    <Textarea 
-                      id="message" 
-                      placeholder="Tell us more about your inquiry..."
-                      rows={6}
-                      required 
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Message
-                  </Button>
-                </form>
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      <Send className="mr-2 h-4 w-4" />
+                      {isSubmitting ? 'Sending...' : 'Send Message'}
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </div>

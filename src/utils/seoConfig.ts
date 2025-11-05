@@ -89,10 +89,12 @@ export const SEO_CONFIG = {
         `${excerpt} | Latest ${category.toLowerCase()} news from Dominica News - your trusted source for breaking news.`,
       keywords: (category: string, customKeywords: string[] = []) => [
         'Dominica News',
-        'Breaking News',
-        category,
+        'Dominica Breaking News',
         'Caribbean News',
+        category,
+        `${category} Dominica`,
         'Latest News',
+        'Nature Island News',
         ...customKeywords
       ]
     },
@@ -100,20 +102,23 @@ export const SEO_CONFIG = {
       title: (category: string) => 
         `${category} News - Latest Updates | Dominica News`,
       description: (category: string) => 
-        `Stay updated with the latest ${category.toLowerCase()} news from Dominica. Breaking stories, analysis, and comprehensive coverage.`
+        `Stay updated with the latest ${category.toLowerCase()} news from Dominica. Breaking stories, analysis, and comprehensive coverage from the Caribbean's trusted news source.`
     },
     homepage: {
       title: 'Dominica News - Breaking News, Politics, Weather & Sports',
-      description: 'Your trusted source for breaking news from Dominica. Get the latest updates on politics, weather, sports, entertainment, and Caribbean regional news.',
+      description: 'Your trusted source for breaking news from Dominica. Get the latest updates on politics, weather, sports, entertainment, and Caribbean regional news. Stay informed with Nature Island\'s premier news platform.',
       keywords: [
         'Dominica News',
-        'Breaking News',
+        'Dominica Breaking News',
         'Caribbean News',
-        'Politics',
-        'Weather Updates',
-        'Sports News',
-        'Entertainment',
-        'Business News'
+        'Dominica Politics',
+        'Dominica Weather Updates',
+        'Dominica Sports News',
+        'Dominica Entertainment',
+        'Dominica Business News',
+        'Nature Island News',
+        'Commonwealth Dominica',
+        'Latest Caribbean News'
       ]
     }
   },

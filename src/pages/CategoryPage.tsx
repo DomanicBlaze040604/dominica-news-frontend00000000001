@@ -8,6 +8,7 @@ import { articlesService } from "../services/articles";
 import { categoriesService } from "../services/categories";
 import { Footer } from "../components/layout/Footer";
 import { Header } from "../components/layout/Header";
+import { CategoryFallback, LoadingFallback, NetworkFallback, EmptyState } from "../components/FallbackContent";
 import { ChevronRight, Home } from "lucide-react";
 
 const CategoryPage = () => {
@@ -25,6 +26,14 @@ const CategoryPage = () => {
     queryKey: ['category-articles', category, { page }],
     queryFn: () => articlesService.getCategoryArticles(category, { page, limit: 12 }),
     enabled: !!category,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 4xx errors
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const categoryInfo = categoryData?.data.category;
@@ -83,24 +92,17 @@ const CategoryPage = () => {
 
         {/* Articles Grid */}
         {isLoadingArticles ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-                <div className="bg-gray-200 h-4 rounded mb-2"></div>
-                <div className="bg-gray-200 h-3 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
+          <LoadingFallback 
+            type="category" 
+            message={`Loading ${categoryTitle.toLowerCase()} articles...`}
+            size="medium"
+          />
         ) : articlesError ? (
-          <div className="text-center py-16 animate-fade-in">
-            <p className="text-red-600 text-lg mb-4">
-              Failed to load articles for this category.
-            </p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              Try Again
-            </Button>
-          </div>
+          <NetworkFallback
+            title="Failed to Load Articles"
+            description={`Unable to load articles for ${categoryTitle}. Please check your connection and try again.`}
+            onRetry={() => window.location.reload()}
+          />
         ) : articles.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -115,6 +117,7 @@ const CategoryPage = () => {
                   category={article.category.name}
                   date={article.publishedAt || article.createdAt}
                   slug={article.slug}
+                  author={article.author}
                   animationDelay={100 * (index + 1)}
                 />
               ))}
@@ -144,14 +147,13 @@ const CategoryPage = () => {
             )}
           </>
         ) : (
-          <div className="text-center py-16 animate-fade-in">
-            <p className="text-muted-foreground text-lg mb-4">
-              No articles found in this category yet.
-            </p>
-            <Button asChild variant="outline">
-              <Link to="/">Browse All Articles</Link>
-            </Button>
-          </div>
+          <EmptyState
+            type="category"
+            title={`No Articles in ${categoryTitle}`}
+            description={`This category doesn't have any articles yet. Check back later or explore other categories.`}
+            actionLabel="Browse All Articles"
+            actionHref="/"
+          />
         )}
       </main>
 

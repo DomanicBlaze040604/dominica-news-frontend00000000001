@@ -32,7 +32,7 @@ export const AdminArticles: React.FC = () => {
 
   // Fetch articles
   const { data: articlesData, isLoading } = useQuery({
-    queryKey: ['admin-articles', { page, status: statusFilter === 'all' ? undefined : statusFilter }],
+    queryKey: ['articles', { page, status: statusFilter === 'all' ? undefined : statusFilter }],
     queryFn: () => articlesService.getAdminArticles({
       page,
       limit: 10,
@@ -42,7 +42,7 @@ export const AdminArticles: React.FC = () => {
 
   // Fetch categories for display
   const { data: categoriesData } = useQuery({
-    queryKey: ['admin-categories'],
+    queryKey: ['categories'],
     queryFn: categoriesService.getAdminCategories,
   });
 

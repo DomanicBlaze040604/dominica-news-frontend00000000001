@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertTriangle, Plus, Edit2, Trash2, Save, X, Power, PowerOff, Filter, Archive, History } from 'lucide-react';
 import { breakingNewsService } from '../../services/breakingNews';
 import { BreakingNews, BreakingNewsFormData } from '../../types/api';
 import { toast } from 'sonner';
@@ -19,11 +20,13 @@ export const AdminBreakingNews: React.FC = () => {
     text: '',
     isActive: false,
   });
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   // Fetch breaking news using React Query
   const { data: breakingNewsData, isLoading } = useQuery({
-    queryKey: ['admin-breaking-news'],
+    queryKey: ['breaking-news'],
     queryFn: () => breakingNewsService.getAll(),
   });
 
@@ -34,8 +37,7 @@ export const AdminBreakingNews: React.FC = () => {
     mutationFn: breakingNewsService.create,
     onSuccess: () => {
       toast.success('Breaking news created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-breaking-news'] });
-      queryClient.invalidateQueries({ queryKey: ['breaking-news'] }); // Also invalidate public
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] });
       setShowForm(false);
       setFormData({ text: '', isActive: false });
     },
@@ -50,8 +52,7 @@ export const AdminBreakingNews: React.FC = () => {
       breakingNewsService.update(id, data),
     onSuccess: () => {
       toast.success('Breaking news updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-breaking-news'] });
-      queryClient.invalidateQueries({ queryKey: ['breaking-news'] }); // Also invalidate public
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] });
       setShowForm(false);
       setEditingId(null);
       setFormData({ text: '', isActive: false });
@@ -66,11 +67,22 @@ export const AdminBreakingNews: React.FC = () => {
     mutationFn: breakingNewsService.delete,
     onSuccess: () => {
       toast.success('Breaking news deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-breaking-news'] });
-      queryClient.invalidateQueries({ queryKey: ['breaking-news'] }); // Also invalidate public
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] });
     },
     onError: (error: Error & { response?: { data?: { error?: string } } }) => {
       toast.error(error.response?.data?.error || 'Failed to delete breaking news');
+    },
+  });
+
+  // Toggle active mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: breakingNewsService.toggleActive,
+    onSuccess: (data) => {
+      toast.success(`Breaking news ${data.isActive ? 'activated' : 'deactivated'} successfully!`);
+      queryClient.invalidateQueries({ queryKey: ['breaking-news'] });
+    },
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
+      toast.error(error.response?.data?.error || 'Failed to toggle breaking news status');
     },
   });
 
@@ -109,6 +121,10 @@ export const AdminBreakingNews: React.FC = () => {
     }
   };
 
+  const handleToggleActive = (id: string) => {
+    toggleActiveMutation.mutate(id);
+  };
+
   const resetForm = () => {
     setFormData({ text: '', isActive: false });
     setEditingId(null);
@@ -117,6 +133,25 @@ export const AdminBreakingNews: React.FC = () => {
 
   const characterCount = formData.text.length;
   const isOverLimit = characterCount > 200;
+
+  // Filter breaking news based on status and search term
+  const filteredBreakingNews = breakingNews.filter(news => {
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && news.isActive) ||
+      (statusFilter === 'inactive' && !news.isActive);
+    
+    const matchesSearch = searchTerm === '' || 
+      news.text.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesStatus && matchesSearch;
+  });
+
+  // Get statistics
+  const stats = {
+    total: breakingNews.length,
+    active: breakingNews.filter(news => news.isActive).length,
+    inactive: breakingNews.filter(news => !news.isActive).length,
+  };
 
   if (isLoading) {
     return (
@@ -132,6 +167,20 @@ export const AdminBreakingNews: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Breaking News Management</h1>
           <p className="text-gray-600">Manage breaking news alerts and notifications</p>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <History className="h-4 w-4" />
+              <span>Total: {stats.total}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <Power className="h-4 w-4" />
+              <span>Active: {stats.active}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Archive className="h-4 w-4" />
+              <span>Inactive: {stats.inactive}</span>
+            </div>
+          </div>
         </div>
         <Button
           onClick={() => setShowForm(true)}
@@ -235,25 +284,70 @@ export const AdminBreakingNews: React.FC = () => {
       {/* Breaking News List */}
       <Card>
         <CardHeader>
-          <CardTitle>Breaking News History</CardTitle>
-          <CardDescription>
-            All breaking news entries, including active and inactive ones
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Breaking News History
+              </CardTitle>
+              <CardDescription>
+                All breaking news entries, including active and inactive ones
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'inactive') => setStatusFilter(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                placeholder="Search breaking news..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {breakingNews.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No breaking news</h3>
-              <p className="text-gray-600 mb-4">Get started by creating your first breaking news alert.</p>
-              <Button onClick={() => setShowForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Breaking News
-              </Button>
-            </div>
+          {filteredBreakingNews.length === 0 ? (
+            breakingNews.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No breaking news</h3>
+                <p className="text-gray-600 mb-4">Get started by creating your first breaking news alert.</p>
+                <Button onClick={() => setShowForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Breaking News
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Filter className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No matching breaking news</h3>
+                <p className="text-gray-600 mb-4">Try adjusting your filters or search term.</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setSearchTerm('');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )
           ) : (
             <div className="space-y-4">
-              {breakingNews.map((news) => (
+              {filteredBreakingNews.map((news) => (
                 <div
                   key={news.id}
                   className={`p-4 border rounded-lg ${
@@ -269,8 +363,13 @@ export const AdminBreakingNews: React.FC = () => {
                           {news.isActive ? 'ACTIVE' : 'INACTIVE'}
                         </Badge>
                         <span className="text-sm text-gray-500">
-                          Created {new Date(news.createdAt).toLocaleDateString()}
+                          Created {new Date(news.createdAt).toLocaleDateString()} at {new Date(news.createdAt).toLocaleTimeString()}
                         </span>
+                        {news.updatedAt !== news.createdAt && (
+                          <span className="text-sm text-gray-500">
+                            • Updated {new Date(news.updatedAt).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
                       <p className="text-gray-900 mb-2">{news.text}</p>
                       <p className="text-sm text-gray-600">
@@ -278,6 +377,29 @@ export const AdminBreakingNews: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleActive(news.id)}
+                        className={`flex items-center gap-1 ${
+                          news.isActive 
+                            ? 'text-orange-600 hover:text-orange-700' 
+                            : 'text-green-600 hover:text-green-700'
+                        }`}
+                        disabled={toggleActiveMutation.isPending}
+                      >
+                        {news.isActive ? (
+                          <>
+                            <PowerOff className="h-3 w-3" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <Power className="h-3 w-3" />
+                            Activate
+                          </>
+                        )}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -292,9 +414,10 @@ export const AdminBreakingNews: React.FC = () => {
                         size="sm"
                         onClick={() => handleDelete(news.id)}
                         className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-3 w-3" />
-                        Deactivate
+                        Delete
                       </Button>
                     </div>
                   </div>

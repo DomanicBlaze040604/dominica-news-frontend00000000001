@@ -13,6 +13,8 @@ import FeaturedSectionCards from "../components/FeaturedSectionCards";
 import FeaturedSectionSingle from "../components/FeaturedSectionSingle";
 import { Footer } from "../components/layout/Footer";
 import { Header } from "../components/layout/Header";
+import { BreakingNewsTicker } from "../components/BreakingNewsTicker";
+import { EmptyState, LoadingFallback, NetworkFallback } from "../components/FallbackContent";
 import { Search, X } from "lucide-react";
 
 const Index = () => {
@@ -31,6 +33,14 @@ const Index = () => {
     queryKey: ['pinned-articles'],
     queryFn: () => articlesService.getPinnedArticles(3),
     enabled: !searchQuery, // Only fetch when not searching
+    retry: (failureCount, error: any) => {
+      // Don't retry on 4xx errors
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch latest articles
@@ -43,12 +53,29 @@ const Index = () => {
         return articlesService.getLatestArticles({ limit: 9, excludePinned: true });
       }
     },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 4xx errors
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Fetch categories
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: categoriesService.getCategories,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 4xx errors
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Fetch featured section layout setting
@@ -97,6 +124,9 @@ const Index = () => {
         <Navbar />
       </Header>
       
+      {/* Breaking News Ticker - Positioned prominently at top */}
+      <BreakingNewsTicker className="sticky top-0 z-40" />
+      
       <main className="container mx-auto px-4 py-8">
         {/* Search Section */}
         {searchQuery && (
@@ -134,12 +164,15 @@ const Index = () => {
           </form>
         </section>
 
-        {/* Latest News Section - Now comes first */}
-        <section className="mb-12 animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-4xl font-headline font-extrabold text-foreground pb-2 border-b-2 border-primary inline-block">
-              {searchQuery ? 'Search Results' : 'Latest News'}
-            </h2>
+        {/* Latest News Section - Moved to top position below navigation */}
+        <section className="mb-16 animate-fade-in">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-5xl font-headline font-black text-foreground mb-2">
+                {searchQuery ? 'Search Results' : 'Latest News'}
+              </h2>
+              <div className="w-24 h-1 bg-primary rounded-full"></div>
+            </div>
             {!searchQuery && pagination && pagination.totalPages > 1 && (
               <Button variant="outline" size="sm" className="hover:bg-primary hover:text-primary-foreground transition-colors">
                 View All
@@ -147,16 +180,24 @@ const Index = () => {
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Responsive grid layout with improved spacing */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {isLoadingArticles ? (
-              // Loading skeletons
-              Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="animate-pulse">
-                  <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-                  <div className="bg-gray-200 h-4 rounded mb-2"></div>
-                  <div className="bg-gray-200 h-3 rounded w-3/4"></div>
-                </div>
-              ))
+              <div className="col-span-full">
+                <LoadingFallback 
+                  type="article" 
+                  message="Loading latest news..." 
+                  size="medium"
+                />
+              </div>
+            ) : articlesError ? (
+              <div className="col-span-full">
+                <NetworkFallback
+                  title="Failed to Load Articles"
+                  description="Unable to load the latest news. Please check your connection and try again."
+                  onRetry={() => window.location.reload()}
+                />
+              </div>
             ) : filteredArticles.length > 0 ? (
               (searchQuery ? filteredArticles : latestArticles.slice(0, 6)).map((article, index) => (
                 <NewsCard
@@ -174,26 +215,30 @@ const Index = () => {
                 />
               ))
             ) : (
-              <div className="col-span-full text-center py-12">
-                <p className="text-gray-600">
-                  {searchQuery ? `No articles found for "${searchQuery}"` : 'No articles available.'}
-                </p>
-                {searchQuery && (
-                  <Button onClick={clearSearch} variant="outline" className="mt-4">
-                    Clear Search
-                  </Button>
-                )}
+              <div className="col-span-full">
+                <EmptyState
+                  type={searchQuery ? "search" : "articles"}
+                  title={searchQuery ? `No results for "${searchQuery}"` : "No Articles Available"}
+                  description={searchQuery 
+                    ? "Try different keywords or browse our categories to find what you're looking for."
+                    : "Check back later for the latest news and updates from Dominica."
+                  }
+                  actionLabel={searchQuery ? "Clear Search" : "Browse Categories"}
+                  onAction={searchQuery ? clearSearch : undefined}
+                  actionHref={searchQuery ? undefined : "/"}
+                />
               </div>
             )}
           </div>
 
           {/* Load More Button - Only show if not searching */}
           {!searchQuery && pagination && pagination.hasNextPage && (
-            <div className="text-center mt-8">
+            <div className="text-center mt-12">
               <Button
                 onClick={() => setPage(page + 1)}
                 variant="outline"
-                className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                size="lg"
+                className="hover:bg-primary hover:text-primary-foreground transition-colors px-8 py-3"
               >
                 Load More Articles
               </Button>
@@ -201,17 +246,23 @@ const Index = () => {
           )}
         </section>
 
-        {/* Featured/Pinned Section - Now comes after Latest News */}
+        {/* Featured Stories Section - Positioned underneath Latest News */}
         {!searchQuery && (
-          <section className="mb-12 animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <h2 className="text-4xl font-headline font-extrabold text-foreground mb-6 pb-2 border-b-2 border-primary inline-block">
-              Featured Stories
-            </h2>
-            <div className="mt-6">
+          <section className="mb-16 animate-fade-in" style={{ animationDelay: "200ms" }}>
+            <div className="mb-8">
+              <h2 className="text-5xl font-headline font-black text-foreground mb-2">
+                Featured Stories
+              </h2>
+              <div className="w-24 h-1 bg-primary rounded-full"></div>
+            </div>
+            <div className="mt-8">
               {articlesError ? (
-                <div className="text-center py-12">
-                  <p className="text-red-600">Failed to load articles. Please try again later.</p>
-                </div>
+                <NetworkFallback
+                  title="Featured Stories Unavailable"
+                  description="Unable to load featured stories at the moment. Please try again later."
+                  onRetry={() => window.location.reload()}
+                  showSearch={false}
+                />
               ) : layoutType === 'cards' ? (
                 <FeaturedSectionCards 
                   articles={featuredArticles} 

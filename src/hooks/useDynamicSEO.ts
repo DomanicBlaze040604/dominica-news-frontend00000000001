@@ -18,14 +18,14 @@ export const useDynamicSEO = () => {
 
   // Create dynamic SEO config
   const dynamicSEOConfig = useMemo(() => {
-    const siteName = siteNameData?.data?.value || SEO_CONFIG.site.name;
-    const siteDescription = siteDescriptionData?.data?.value || SEO_CONFIG.site.description;
-    const metaTitle = metaTitleData?.data?.value || SEO_CONFIG.templates.homepage.title;
-    const metaDescription = metaDescriptionData?.data?.value || SEO_CONFIG.templates.homepage.description;
-    const keywords = keywordsData?.data?.value || SEO_CONFIG.templates.homepage.keywords.join(', ');
-    const ogImage = ogImageData?.data?.value || SEO_CONFIG.site.defaultImage;
-    const facebookUrl = facebookData?.data?.value || SEO_CONFIG.site.facebookPage;
-    const twitterHandle = twitterData?.data?.value ? `@${twitterData.data.value.split('/').pop()}` : SEO_CONFIG.site.twitterHandle;
+    const siteName = siteNameData?.value || SEO_CONFIG.site.name;
+    const siteDescription = siteDescriptionData?.value || SEO_CONFIG.site.description;
+    const metaTitle = metaTitleData?.value || SEO_CONFIG.templates.homepage.title;
+    const metaDescription = metaDescriptionData?.value || SEO_CONFIG.templates.homepage.description;
+    const keywords = keywordsData?.value || SEO_CONFIG.templates.homepage.keywords.join(', ');
+    const ogImage = ogImageData?.value || SEO_CONFIG.site.defaultImage;
+    const facebookUrl = facebookData?.value || SEO_CONFIG.site.facebookPage;
+    const twitterHandle = twitterData?.value ? `@${twitterData.value.split('/').pop()}` : SEO_CONFIG.site.twitterHandle;
 
     return {
       ...SEO_CONFIG,

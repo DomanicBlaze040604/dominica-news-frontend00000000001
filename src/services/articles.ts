@@ -1,5 +1,6 @@
 import { api } from './api';
 import { ApiResponse, Article, ArticlesResponse, ArticleFormData } from '../types/api';
+import { withFallback, fallbackService } from './fallbackData';
 
 export const articlesService = {
   // Public endpoints
@@ -79,35 +80,40 @@ export const articlesService = {
     status?: 'draft' | 'published';
     category?: string;
   }): Promise<ApiResponse<ArticlesResponse>> => {
-    const searchParams = new URLSearchParams();
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.status) searchParams.append('status', params.status);
-    if (params?.category) searchParams.append('category', params.category);
+    return withFallback(
+      async () => {
+        const searchParams = new URLSearchParams();
+        if (params?.page) searchParams.append('page', params.page.toString());
+        if (params?.limit) searchParams.append('limit', params.limit.toString());
+        if (params?.status) searchParams.append('status', params.status);
+        if (params?.category) searchParams.append('category', params.category);
 
-    const response = await api.get<ApiResponse<ArticlesResponse>>(
-      `/admin/articles?${searchParams.toString()}`
+        const response = await api.get<ApiResponse<ArticlesResponse>>(
+          `/articles?${searchParams.toString()}`
+        );
+        return response.data;
+      },
+      () => fallbackService.getAdminArticles(params)
     );
-    return response.data;
   },
 
   getAdminArticleById: async (id: string): Promise<ApiResponse<{ article: Article }>> => {
-    const response = await api.get<ApiResponse<{ article: Article }>>(`/admin/articles/${id}`);
+    const response = await api.get<ApiResponse<{ article: Article }>>(`/articles/${id}`);
     return response.data;
   },
 
   createArticle: async (articleData: ArticleFormData): Promise<ApiResponse<{ article: Article }>> => {
-    const response = await api.post<ApiResponse<{ article: Article }>>('/admin/articles', articleData);
+    const response = await api.post<ApiResponse<{ article: Article }>>('/articles', articleData);
     return response.data;
   },
 
   updateArticle: async (id: string, articleData: Partial<ArticleFormData>): Promise<ApiResponse<{ article: Article }>> => {
-    const response = await api.put<ApiResponse<{ article: Article }>>(`/admin/articles/${id}`, articleData);
+    const response = await api.put<ApiResponse<{ article: Article }>>(`/articles/${id}`, articleData);
     return response.data;
   },
 
   deleteArticle: async (id: string): Promise<ApiResponse<{}>> => {
-    const response = await api.delete<ApiResponse<{}>>(`/admin/articles/${id}`);
+    const response = await api.delete<ApiResponse<{}>>(`/articles/${id}`);
     return response.data;
   },
 };

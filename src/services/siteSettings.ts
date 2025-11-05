@@ -89,6 +89,22 @@ class SiteSettingsService {
     const response = await api.put('/settings/maintenance', { enabled });
     return response.data;
   }
+
+  // Get public settings for website display
+  async getPublicSettings(): Promise<ApiResponse<SiteSettingsResponse>> {
+    const response = await api.get('/settings');
+    return response.data;
+  }
+
+  async getPublicSocialMedia(): Promise<ApiResponse<SocialMediaSettings>> {
+    const response = await api.get('/settings/social-media');
+    return response.data;
+  }
+
+  async getPublicContactInfo(): Promise<ApiResponse<ContactInfo>> {
+    const response = await api.get('/settings/contact');
+    return response.data;
+  }
 }
 
 export const siteSettingsService = new SiteSettingsService();

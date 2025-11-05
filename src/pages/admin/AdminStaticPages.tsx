@@ -24,20 +24,26 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { staticPagesService, StaticPageFormData } from '../../services/staticPages';
-import { Plus, Edit, Trash2, Search, FileText, Globe, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, FileText, Globe, Eye, Menu } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { StaticPage } from '../../services/staticPages';
+import { SlugInput } from '../../components/admin/SlugInput';
+import { MenuReorder } from '../../components/admin/MenuReorder';
 
 const staticPageSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
-  slug: z.string().min(2, 'Slug must be at least 2 characters').regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens').optional(),
+  slug: z.string().min(2, 'Slug must be at least 2 characters').regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
   content: z.string().min(10, 'Content must be at least 10 characters'),
   metaTitle: z.string().max(60, 'Meta title cannot exceed 60 characters').optional(),
   metaDescription: z.string().max(160, 'Meta description cannot exceed 160 characters').optional(),
+  template: z.enum(['default', 'about', 'contact', 'privacy', 'terms', 'editorial']).optional(),
+  showInMenu: z.boolean().optional(),
+  menuOrder: z.number().min(0).optional(),
   isPublished: z.boolean().optional(),
 });
 
@@ -46,13 +52,14 @@ type StaticPageFormDataType = z.infer<typeof staticPageSchema>;
 export const AdminStaticPages: React.FC = () => {
   const [editingPage, setEditingPage] = useState<StaticPage | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showMenuReorder, setShowMenuReorder] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPublishedOnly, setShowPublishedOnly] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch static pages
   const { data: pagesData, isLoading } = useQuery({
-    queryKey: ['admin-static-pages', showPublishedOnly],
+    queryKey: ['static-pages', showPublishedOnly],
     queryFn: () => staticPagesService.getAdminPages(showPublishedOnly ? true : undefined),
   });
 
@@ -74,6 +81,9 @@ export const AdminStaticPages: React.FC = () => {
       content: '',
       metaTitle: '',
       metaDescription: '',
+      template: 'default',
+      showInMenu: false,
+      menuOrder: 0,
       isPublished: true,
     },
   });
@@ -83,7 +93,7 @@ export const AdminStaticPages: React.FC = () => {
     mutationFn: (data: StaticPageFormData) => staticPagesService.createPage(data),
     onSuccess: () => {
       toast.success('Static page created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-static-pages'] });
+      queryClient.invalidateQueries({ queryKey: ['static-pages'] });
       setIsDialogOpen(false);
       resetForm();
     },
@@ -98,7 +108,7 @@ export const AdminStaticPages: React.FC = () => {
       staticPagesService.updatePage(id, data),
     onSuccess: () => {
       toast.success('Static page updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-static-pages'] });
+      queryClient.invalidateQueries({ queryKey: ['static-pages'] });
       setIsDialogOpen(false);
       resetForm();
     },
@@ -112,7 +122,7 @@ export const AdminStaticPages: React.FC = () => {
     mutationFn: staticPagesService.deletePage,
     onSuccess: () => {
       toast.success('Static page deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-static-pages'] });
+      queryClient.invalidateQueries({ queryKey: ['static-pages'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to delete page');
@@ -127,33 +137,27 @@ export const AdminStaticPages: React.FC = () => {
       content: '',
       metaTitle: '',
       metaDescription: '',
+      template: 'default',
+      showInMenu: false,
+      menuOrder: 0,
       isPublished: true,
     });
   };
 
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
-  };
-
-  const handleTitleChange = (title: string) => {
-    form.setValue('title', title);
-    if (!editingPage && !form.getValues('slug')) {
-      form.setValue('slug', generateSlug(title));
-    }
+  const handleSlugChange = (slug: string) => {
+    form.setValue('slug', slug);
   };
 
   const handleSubmit = (data: StaticPageFormDataType) => {
     const formData: StaticPageFormData = {
       title: data.title,
       content: data.content,
-      slug: data.slug || generateSlug(data.title),
+      slug: data.slug,
       metaTitle: data.metaTitle,
       metaDescription: data.metaDescription,
+      template: data.template,
+      showInMenu: data.showInMenu,
+      menuOrder: data.menuOrder,
       isPublished: data.isPublished,
     };
 
@@ -172,6 +176,9 @@ export const AdminStaticPages: React.FC = () => {
       content: page.content,
       metaTitle: page.metaTitle || '',
       metaDescription: page.metaDescription || '',
+      template: (page as any).template || 'default',
+      showInMenu: (page as any).showInMenu || false,
+      menuOrder: (page as any).menuOrder || 0,
       isPublished: page.isPublished,
     });
     setIsDialogOpen(true);
@@ -200,13 +207,21 @@ export const AdminStaticPages: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Static Pages</h1>
           <p className="text-gray-600">Manage your website's static content pages</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreateDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Page
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowMenuReorder(!showMenuReorder)}
+          >
+            <Menu className="mr-2 h-4 w-4" />
+            Menu Order
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreateDialog}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Page
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -227,8 +242,7 @@ export const AdminStaticPages: React.FC = () => {
                   <Input
                     id="title"
                     placeholder="Enter page title..."
-                    value={form.watch('title')}
-                    onChange={(e) => handleTitleChange(e.target.value)}
+                    {...form.register('title')}
                   />
                   {form.formState.errors.title && (
                     <p className="text-sm text-red-500 mt-1">
@@ -237,22 +251,20 @@ export const AdminStaticPages: React.FC = () => {
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="slug">URL Slug *</Label>
-                  <Input
-                    id="slug"
-                    placeholder="page-url-slug"
-                    {...form.register('slug')}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    URL: /pages/{form.watch('slug') || 'page-url-slug'}
+                <SlugInput
+                  title={form.watch('title')}
+                  slug={form.watch('slug')}
+                  onSlugChange={handleSlugChange}
+                  type="static-page"
+                  excludeId={editingPage?.id}
+                  label="URL Slug *"
+                  placeholder="page-url-slug"
+                />
+                {form.formState.errors.slug && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.slug.message}
                   </p>
-                  {form.formState.errors.slug && (
-                    <p className="text-sm text-red-500 mt-1">
-                      {form.formState.errors.slug.message}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
 
               {/* Content */}
@@ -272,6 +284,63 @@ export const AdminStaticPages: React.FC = () => {
                     {form.formState.errors.content.message}
                   </p>
                 )}
+              </div>
+
+              {/* Template and Menu Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Page Settings</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="template">Page Template</Label>
+                    <Select
+                      value={form.watch('template')}
+                      onValueChange={(value) => form.setValue('template', value as any)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default</SelectItem>
+                        <SelectItem value="about">About Page</SelectItem>
+                        <SelectItem value="contact">Contact Page</SelectItem>
+                        <SelectItem value="privacy">Privacy Policy</SelectItem>
+                        <SelectItem value="terms">Terms of Service</SelectItem>
+                        <SelectItem value="editorial">Editorial Team</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Choose a template that best fits your page content
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="menuOrder">Menu Order</Label>
+                    <Input
+                      id="menuOrder"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={form.watch('menuOrder') || 0}
+                      onChange={(e) => form.setValue('menuOrder', parseInt(e.target.value) || 0)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Lower numbers appear first in navigation
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="showInMenu"
+                    checked={form.watch('showInMenu')}
+                    onCheckedChange={(checked) => form.setValue('showInMenu', checked)}
+                  />
+                  <Label htmlFor="showInMenu">Show in Navigation Menu</Label>
+                  <p className="text-xs text-gray-500">
+                    Display this page in the main site navigation
+                  </p>
+                </div>
               </div>
 
               {/* SEO Fields */}
@@ -350,7 +419,16 @@ export const AdminStaticPages: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      {/* Menu Reorder */}
+      {showMenuReorder && (
+        <MenuReorder 
+          pages={pages as any} 
+          onClose={() => setShowMenuReorder(false)} 
+        />
+      )}
 
       {/* Search and Filters */}
       <Card>
@@ -432,6 +510,7 @@ export const AdminStaticPages: React.FC = () => {
                   <TableRow>
                     <TableHead>Page</TableHead>
                     <TableHead>URL</TableHead>
+                    <TableHead>Menu</TableHead>
                     <TableHead>SEO</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Updated</TableHead>
@@ -460,6 +539,29 @@ export const AdminStaticPages: React.FC = () => {
                           <code className="text-sm bg-gray-100 px-2 py-1 rounded">
                             /pages/{page.slug}
                           </code>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {(page as any).showInMenu ? (
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="default" className="text-xs">
+                                In Menu
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                Order: {(page as any).menuOrder || 0}
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Hidden
+                            </Badge>
+                          )}
+                          {(page as any).template && (page as any).template !== 'default' && (
+                            <div className="text-xs text-gray-500">
+                              Template: {(page as any).template}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>

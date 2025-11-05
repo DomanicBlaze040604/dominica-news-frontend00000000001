@@ -23,6 +23,54 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
+
+  /* Navigation dropdown animations */
+  .animate-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .slide-in-from-top-2 {
+    animation: slideInFromTop 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideInFromTop {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) translateX(-50%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) translateX(-50%);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
@@ -114,7 +162,84 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "kern" 1, "liga" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Enhanced typography hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+    font-feature-settings: "kern" 1, "liga" 1;
+    text-rendering: optimizeLegibility;
+    line-height: 1.2;
+  }
+
+  h1 {
+    @apply text-5xl font-black;
+    letter-spacing: -0.025em;
+  }
+
+  h2 {
+    @apply text-4xl font-black;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    @apply text-3xl font-bold;
+    letter-spacing: -0.015em;
+  }
+
+  h4 {
+    @apply text-2xl font-bold;
+    letter-spacing: -0.01em;
+  }
+
+  h5 {
+    @apply text-xl font-semibold;
+  }
+
+  h6 {
+    @apply text-lg font-semibold;
+  }
+
+  /* Enhanced paragraph and text styling */
+  p {
+    @apply leading-relaxed;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  /* Article content typography */
+  .article-title {
+    @apply font-headline font-black text-4xl leading-tight;
+    letter-spacing: -0.02em;
+  }
+
+  .article-subtitle {
+    @apply font-headline font-bold text-2xl leading-tight;
+    letter-spacing: -0.015em;
+  }
+
+  .article-excerpt {
+    @apply text-lg leading-relaxed text-muted-foreground;
+  }
+
+  /* Author and metadata typography */
+  .author-name {
+    @apply font-medium text-base;
+    letter-spacing: 0.01em;
+  }
+
+  .author-role {
+    @apply font-light text-sm text-muted-foreground;
+    letter-spacing: 0.02em;
+  }
+
+  .article-meta {
+    @apply text-sm font-medium;
+    letter-spacing: 0.015em;
   }
 }
 /* Breaking News Ticker Styles */

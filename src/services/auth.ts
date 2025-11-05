@@ -34,6 +34,23 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UpdateProfileData {
+  fullName: string;
+}
+
+export interface RefreshTokenResponse {
+  success: boolean;
+  message: string;
+  data: {
+    token: string;
+  };
+}
+
 // Authentication API calls
 export const authService = {
   // Login user
@@ -54,9 +71,33 @@ export const authService = {
     return response.data;
   },
 
+  // Refresh access token
+  refreshToken: async (): Promise<RefreshTokenResponse> => {
+    const response = await api.post<RefreshTokenResponse>('/auth/refresh');
+    return response.data;
+  },
+
   // Logout user
   logout: async (): Promise<ApiResponse<{}>> => {
     const response = await api.post<ApiResponse<{}>>('/auth/logout');
+    return response.data;
+  },
+
+  // Logout from all devices
+  logoutAll: async (): Promise<ApiResponse<{}>> => {
+    const response = await api.post<ApiResponse<{}>>('/auth/logout-all');
+    return response.data;
+  },
+
+  // Change password
+  changePassword: async (data: ChangePasswordData): Promise<ApiResponse<{}>> => {
+    const response = await api.put<ApiResponse<{}>>('/auth/change-password', data);
+    return response.data;
+  },
+
+  // Update profile
+  updateProfile: async (data: UpdateProfileData): Promise<ApiResponse<{ user: User }>> => {
+    const response = await api.put<ApiResponse<{ user: User }>>('/auth/profile', data);
     return response.data;
   },
 };
@@ -83,10 +124,47 @@ export const tokenService = {
       // Basic JWT token validation (check if it's not expired)
       const payload = JSON.parse(atob(token.split('.')[1]));
       const currentTime = Date.now() / 1000;
-      return payload.exp > currentTime;
+      
+      // Check if token is expired
+      if (payload.exp <= currentTime) {
+        return false;
+      }
+      
+      // Check if token type is access token
+      if (payload.tokenType && payload.tokenType !== 'access') {
+        return false;
+      }
+      
+      return true;
     } catch {
       return false;
     }
+  },
+
+  getTokenExpiration: (): Date | null => {
+    const token = tokenService.getToken();
+    if (!token) return null;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp) {
+        return new Date(payload.exp * 1000);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  isTokenExpiringSoon: (minutesThreshold: number = 5): boolean => {
+    const expiration = tokenService.getTokenExpiration();
+    if (!expiration) return true;
+    
+    const now = new Date();
+    const timeDiff = expiration.getTime() - now.getTime();
+    const minutesDiff = timeDiff / (1000 * 60);
+    
+    return minutesDiff <= minutesThreshold;
   },
 };
 
@@ -108,5 +186,15 @@ export const userService = {
   isAdmin: (): boolean => {
     const user = userService.getUser();
     return user?.role === 'admin';
+  },
+
+  isEditor: (): boolean => {
+    const user = userService.getUser();
+    return user?.role === 'admin' || user?.role === 'editor';
+  },
+
+  hasRole: (role: string): boolean => {
+    const user = userService.getUser();
+    return user?.role === role;
   },
 };

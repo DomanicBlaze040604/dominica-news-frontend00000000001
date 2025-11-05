@@ -39,6 +39,19 @@ const authorSchema = z.object({
   role: z.string().min(2, 'Role must be at least 2 characters'),
   biography: z.string().optional(),
   email: z.string().email('Please enter a valid email address'),
+  title: z.string().optional(),
+  professionalBackground: z.string().optional(),
+  expertise: z.array(z.string()).optional(),
+  specialization: z.array(z.string()).optional(),
+  location: z.string().optional(),
+  phone: z.string().optional(),
+  website: z.string().url('Please enter a valid website URL').optional().or(z.literal('')),
+  socialMedia: z.object({
+    twitter: z.string().optional(),
+    facebook: z.string().optional(),
+    instagram: z.string().optional(),
+    linkedin: z.string().optional(),
+  }).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -54,7 +67,7 @@ export const AdminAuthors: React.FC = () => {
 
   // Fetch authors
   const { data: authorsData, isLoading } = useQuery({
-    queryKey: ['admin-authors'],
+    queryKey: ['authors'],
     queryFn: authorsService.getAdminAuthors,
   });
 
@@ -75,6 +88,19 @@ export const AdminAuthors: React.FC = () => {
       role: '',
       biography: '',
       email: '',
+      title: '',
+      professionalBackground: '',
+      expertise: [],
+      specialization: [],
+      location: '',
+      phone: '',
+      website: '',
+      socialMedia: {
+        twitter: '',
+        facebook: '',
+        instagram: '',
+        linkedin: '',
+      },
       isActive: true,
     },
   });
@@ -84,7 +110,6 @@ export const AdminAuthors: React.FC = () => {
     mutationFn: (data: AuthorFormData) => authorsService.createAuthor(data),
     onSuccess: () => {
       toast.success('Author created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-authors'] });
       queryClient.invalidateQueries({ queryKey: ['authors'] });
       setIsDialogOpen(false);
       resetForm();
@@ -100,7 +125,6 @@ export const AdminAuthors: React.FC = () => {
       authorsService.updateAuthor(id, data),
     onSuccess: () => {
       toast.success('Author updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-authors'] });
       queryClient.invalidateQueries({ queryKey: ['authors'] });
       setIsDialogOpen(false);
       resetForm();
@@ -115,11 +139,22 @@ export const AdminAuthors: React.FC = () => {
     mutationFn: authorsService.deleteAuthor,
     onSuccess: () => {
       toast.success('Author deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-authors'] });
       queryClient.invalidateQueries({ queryKey: ['authors'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to delete author');
+    },
+  });
+
+  // Toggle author status mutation
+  const toggleStatusMutation = useMutation({
+    mutationFn: authorsService.toggleAuthorStatus,
+    onSuccess: (response) => {
+      toast.success(response.message || 'Author status updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['authors'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update author status');
     },
   });
 
@@ -132,6 +167,19 @@ export const AdminAuthors: React.FC = () => {
       role: '',
       biography: '',
       email: '',
+      title: '',
+      professionalBackground: '',
+      expertise: [],
+      specialization: [],
+      location: '',
+      phone: '',
+      website: '',
+      socialMedia: {
+        twitter: '',
+        facebook: '',
+        instagram: '',
+        linkedin: '',
+      },
       isActive: true,
     });
   };
@@ -142,6 +190,19 @@ export const AdminAuthors: React.FC = () => {
       role: data.role,
       email: data.email,
       biography: data.biography,
+      title: data.title,
+      professionalBackground: data.professionalBackground,
+      expertise: data.expertise?.filter(e => e.trim() !== ''),
+      specialization: data.specialization?.filter(s => s.trim() !== ''),
+      location: data.location,
+      phone: data.phone,
+      website: data.website || undefined,
+      socialMedia: {
+        twitter: data.socialMedia?.twitter || undefined,
+        facebook: data.socialMedia?.facebook || undefined,
+        instagram: data.socialMedia?.instagram || undefined,
+        linkedin: data.socialMedia?.linkedin || undefined,
+      },
       isActive: data.isActive,
       profileImage: profileImageData?.urls?.medium || undefined,
     };
@@ -162,6 +223,19 @@ export const AdminAuthors: React.FC = () => {
       role: author.role,
       biography: author.biography || '',
       email: author.email,
+      title: author.title || '',
+      professionalBackground: author.professionalBackground || '',
+      expertise: author.expertise || [],
+      specialization: author.specialization || [],
+      location: author.location || '',
+      phone: author.phone || '',
+      website: author.website || '',
+      socialMedia: {
+        twitter: author.socialMedia?.twitter || '',
+        facebook: author.socialMedia?.facebook || '',
+        instagram: author.socialMedia?.instagram || '',
+        linkedin: author.socialMedia?.linkedin || '',
+      },
       isActive: author.isActive,
     });
     setIsDialogOpen(true);
@@ -171,6 +245,10 @@ export const AdminAuthors: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this author? This action cannot be undone.')) {
       deleteMutation.mutate(authorId);
     }
+  };
+
+  const handleToggleStatus = (authorId: string) => {
+    toggleStatusMutation.mutate(authorId);
   };
 
   const openCreateDialog = () => {
@@ -270,21 +348,153 @@ export const AdminAuthors: React.FC = () => {
               </div>
 
               <div>
+                <Label htmlFor="title">Professional Title</Label>
+                <Input
+                  id="title"
+                  placeholder="e.g., Senior Editor, Chief Correspondent..."
+                  {...form.register('title')}
+                />
+                {form.formState.errors.title && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.title.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
                 <Label htmlFor="biography">Biography</Label>
                 <Textarea
                   id="biography"
                   placeholder="Enter author's biography and background..."
-                  rows={4}
+                  rows={3}
                   {...form.register('biography')}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  This will be displayed on the Editorial Team page and author profiles.
+                  Brief biography for author profiles and bylines.
                 </p>
                 {form.formState.errors.biography && (
                   <p className="text-sm text-red-500 mt-1">
                     {form.formState.errors.biography.message}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <Label htmlFor="professionalBackground">Professional Background</Label>
+                <Textarea
+                  id="professionalBackground"
+                  placeholder="Detailed professional background, experience, education..."
+                  rows={4}
+                  {...form.register('professionalBackground')}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Detailed background information for the Editorial Team page.
+                </p>
+                {form.formState.errors.professionalBackground && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.professionalBackground.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    placeholder="e.g., Roseau, Dominica"
+                    {...form.register('location')}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+1-767-555-0000"
+                    {...form.register('phone')}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  placeholder="https://example.com"
+                  {...form.register('website')}
+                />
+                {form.formState.errors.website && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.website.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Social Media */}
+              <div>
+                <Label className="text-base font-medium">Social Media</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor="twitter">Twitter</Label>
+                    <Input
+                      id="twitter"
+                      placeholder="@username"
+                      {...form.register('socialMedia.twitter')}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="facebook">Facebook</Label>
+                    <Input
+                      id="facebook"
+                      placeholder="facebook.com/username"
+                      {...form.register('socialMedia.facebook')}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="instagram">Instagram</Label>
+                    <Input
+                      id="instagram"
+                      placeholder="@username"
+                      {...form.register('socialMedia.instagram')}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="linkedin">LinkedIn</Label>
+                    <Input
+                      id="linkedin"
+                      placeholder="linkedin.com/in/username"
+                      {...form.register('socialMedia.linkedin')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Expertise and Specialization */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="expertise">Areas of Expertise</Label>
+                  <Input
+                    id="expertise"
+                    placeholder="e.g., Political Analysis, Investigative Journalism"
+                    {...form.register('expertise')}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Comma-separated list of expertise areas
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="specialization">Specializations</Label>
+                  <Input
+                    id="specialization"
+                    placeholder="e.g., Politics, Sports, Business"
+                    {...form.register('specialization')}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Comma-separated list of coverage areas
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -383,6 +593,7 @@ export const AdminAuthors: React.FC = () => {
                     <TableHead>Author</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Articles</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -408,9 +619,13 @@ export const AdminAuthors: React.FC = () => {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">{author.name}</p>
-                            {author.biography && (
-                              <p className="text-sm text-gray-500 max-w-xs truncate">
-                                {author.biography}
+                            {author.title && (
+                              <p className="text-sm text-blue-600">{author.title}</p>
+                            )}
+                            {author.specialization && author.specialization.length > 0 && (
+                              <p className="text-xs text-gray-500">
+                                {author.specialization.slice(0, 2).join(', ')}
+                                {author.specialization.length > 2 && '...'}
                               </p>
                             )}
                           </div>
@@ -429,9 +644,26 @@ export const AdminAuthors: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={author.isActive ? "default" : "secondary"}>
-                          {author.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
+                        <div className="text-sm">
+                          <span className="font-medium">{author.articlesCount || 0}</span>
+                          <span className="text-gray-500 ml-1">articles</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={author.isActive ? "default" : "secondary"}>
+                            {author.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleStatus(author.id)}
+                            disabled={toggleStatusMutation.isPending}
+                            className="text-xs"
+                          >
+                            {author.isActive ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-500">

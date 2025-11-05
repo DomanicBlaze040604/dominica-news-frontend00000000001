@@ -2,13 +2,14 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import NewsCard from "@/components/NewsCard";
-import { LazyImage } from "@/components/LazyImage";
+import { AccessibleImage } from "@/components/AccessibleImage";
 import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { articlesService } from "../services/articles";
 import { Footer } from "../components/layout/Footer";
 import { Header } from "../components/layout/Header";
+import { ArticleFallback, LoadingFallback, NetworkFallback } from "../components/FallbackContent";
 import { ChevronRight, Home, Calendar, User, Share2, Facebook, Twitter, Linkedin } from "lucide-react";
 import { format } from "date-fns";
 
@@ -60,18 +61,13 @@ const ArticlePage = () => {
           <Navbar />
         </Header>
         <main className="container mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-64 mb-6"></div>
-            <div className="h-10 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
-            <div className="h-64 bg-gray-200 rounded mb-8"></div>
-            <div className="space-y-4">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            </div>
-          </div>
+          <LoadingFallback 
+            type="article" 
+            message="Loading article..." 
+            size="large"
+          />
         </main>
+        <Footer />
       </div>
     );
   }
@@ -83,16 +79,13 @@ const ArticlePage = () => {
           <Navbar />
         </Header>
         <main className="container mx-auto px-4 py-8">
-          <div className="text-center py-16">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Article Not Found</h1>
-            <p className="text-gray-600 mb-8">
-              The article you're looking for doesn't exist or has been removed.
-            </p>
-            <Button asChild>
-              <Link to="/">Back to Home</Link>
-            </Button>
-          </div>
+          <ArticleFallback
+            title="Article Not Found"
+            description="The article you're looking for doesn't exist or has been removed."
+            onRetry={() => window.location.reload()}
+          />
         </main>
+        <Footer />
       </div>
     );
   }
@@ -202,13 +195,21 @@ const ArticlePage = () => {
           {/* Featured Image */}
           {article.featuredImage && (
             <div className="mb-8 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-              <LazyImage
+              <AccessibleImage
                 src={article.featuredImage}
                 alt={article.featuredImageAlt || article.title}
                 className="w-full h-64 md:h-96 object-cover rounded-lg shadow-lg"
-                useIntersectionObserver={true}
-                threshold={0.1}
-                rootMargin="50px"
+                priority={true}
+                variant="large"
+                breakpoints={{
+                  mobile: { width: 768, variant: "medium" },
+                  tablet: { width: 1024, variant: "large" },
+                  desktop: { width: 1920, variant: "large" }
+                }}
+                showLoadingIndicator={true}
+                fetchPriority="high"
+                showCaption={false}
+                description={`Featured image for article: ${article.title}`}
               />
             </div>
           )}
@@ -218,9 +219,10 @@ const ArticlePage = () => {
             className="prose prose-lg max-w-none mb-12 animate-fade-in-up"
             style={{ animationDelay: "300ms" }}
           >
-            <div className="whitespace-pre-wrap leading-relaxed text-foreground">
-              {article.content}
-            </div>
+            <div 
+              className="article-content leading-relaxed text-foreground"
+              dangerouslySetInnerHTML={{ __html: article.content }}
+            />
           </div>
 
           {/* Article Footer */}
@@ -262,15 +264,11 @@ const ArticlePage = () => {
             </h2>
             
             {isLoadingRelated ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="animate-pulse">
-                    <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-                    <div className="bg-gray-200 h-4 rounded mb-2"></div>
-                    <div className="bg-gray-200 h-3 rounded w-3/4"></div>
-                  </div>
-                ))}
-              </div>
+              <LoadingFallback 
+                type="article" 
+                message="Loading related articles..." 
+                size="small"
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {relatedArticles.map((relatedArticle, index) => (
@@ -284,6 +282,7 @@ const ArticlePage = () => {
                     category={relatedArticle.category.name}
                     date={relatedArticle.publishedAt || relatedArticle.createdAt}
                     slug={relatedArticle.slug}
+                    author={relatedArticle.author}
                     animationDelay={100 * (index + 1)}
                   />
                 ))}

@@ -29,14 +29,15 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { SlugInput } from '../../components/admin/SlugInput';
+import { ApiResponse, Category, CategoryFormData } from '../../types/api';
 
 const categorySchema = z.object({
   name: z.string().min(2, 'Category name must be at least 2 characters'),
+  slug: z.string().min(1, 'Slug is required'),
   description: z.string().optional(),
   displayOrder: z.number().min(0, 'Display order must be 0 or greater').optional(),
 });
-
-type CategoryFormData = z.infer<typeof categorySchema>;
 
 export const AdminCategories: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<any>(null);
@@ -45,7 +46,7 @@ export const AdminCategories: React.FC = () => {
 
   // Fetch categories using admin endpoint
   const { data: categoriesData, isLoading } = useQuery({
-    queryKey: ['admin-categories'],
+    queryKey: ['categories'],
     queryFn: categoriesService.getAdminCategories,
   });
 
@@ -56,6 +57,7 @@ export const AdminCategories: React.FC = () => {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: '',
+      slug: '',
       description: '',
       displayOrder: 0,
     },
@@ -66,8 +68,7 @@ export const AdminCategories: React.FC = () => {
     mutationFn: categoriesService.createCategory,
     onSuccess: () => {
       toast.success('Category created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Also invalidate public categories
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       setIsDialogOpen(false);
       form.reset();
     },
@@ -77,13 +78,15 @@ export const AdminCategories: React.FC = () => {
   });
 
   // Update category mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CategoryFormData }) =>
-      categoriesService.updateCategory(id, data),
+  const updateMutation = useMutation<
+    ApiResponse<{ category: Category }>,
+    any,
+    { id: string; data: Partial<CategoryFormData> }
+  >({
+    mutationFn: ({ id, data }) => categoriesService.updateCategory(id, data),
     onSuccess: () => {
       toast.success('Category updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Also invalidate public categories
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       setIsDialogOpen(false);
       setEditingCategory(null);
       form.reset();
@@ -98,8 +101,7 @@ export const AdminCategories: React.FC = () => {
     mutationFn: categoriesService.deleteCategory,
     onSuccess: () => {
       toast.success('Category deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Also invalidate public categories
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to delete category');
@@ -108,9 +110,9 @@ export const AdminCategories: React.FC = () => {
 
   const handleSubmit = (data: CategoryFormData) => {
     if (editingCategory) {
-      updateMutation.mutate({ id: editingCategory.id, data });
+      updateMutation.mutate({ id: editingCategory.id, data: data as Partial<CategoryFormData> });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data as CategoryFormData);
     }
   };
 
@@ -118,15 +120,40 @@ export const AdminCategories: React.FC = () => {
     setEditingCategory(category);
     form.reset({
       name: category.name,
+      slug: category.slug,
       description: category.description || '',
       displayOrder: category.displayOrder || 0,
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (categoryId: string) => {
-    if (window.confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
-      deleteMutation.mutate(categoryId);
+  const handleDelete = async (categoryId: string, categoryName: string) => {
+    // First check if category has articles
+    try {
+      const response = await categoriesService.deleteCategory(categoryId);
+      toast.success('Category deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    } catch (error: any) {
+      if (error.response?.data?.data?.requiresReassignment) {
+        const articlesCount = error.response.data.data.articlesCount;
+        const shouldReassign = window.confirm(
+          `This category "${categoryName}" has ${articlesCount} article(s). ` +
+          'Do you want to reassign them to "Uncategorized" and delete the category? ' +
+          'Click OK to reassign and delete, or Cancel to keep the category.'
+        );
+        
+        if (shouldReassign) {
+          try {
+            await categoriesService.deleteCategory(categoryId, { forceDelete: true });
+            toast.success(`Category deleted and ${articlesCount} article(s) moved to Uncategorized`);
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+          } catch (deleteError: any) {
+            toast.error(deleteError.response?.data?.message || 'Failed to delete category');
+          }
+        }
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to delete category');
+      }
     }
   };
 
@@ -174,6 +201,23 @@ export const AdminCategories: React.FC = () => {
                 {form.formState.errors.name && (
                   <p className="text-sm text-red-500 mt-1">
                     {form.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="slug">URL Slug</Label>
+                <SlugInput
+                  title={form.watch('name') || ''}
+                  slug={form.watch('slug')}
+                  onSlugChange={(slug) => form.setValue('slug', slug)}
+                  type="category"
+                  excludeId={editingCategory?.id}
+                  placeholder="category-url-slug"
+                />
+                {form.formState.errors.slug && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.slug.message}
                   </p>
                 )}
               </div>
@@ -306,7 +350,7 @@ export const AdminCategories: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(category.id)}
+                              onClick={() => handleDelete(category.id, category.name)}
                               className="text-red-600 hover:text-red-700"
                               disabled={deleteMutation.isPending}
                             >

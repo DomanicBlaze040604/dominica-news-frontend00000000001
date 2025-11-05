@@ -1,5 +1,6 @@
 import { api } from './api';
 import { ApiResponse, Category, CategoriesResponse, CategoryFormData } from '../types/api';
+import { withFallback, fallbackService } from './fallbackData';
 
 export const categoriesService = {
   // Public endpoints
@@ -13,6 +14,12 @@ export const categoriesService = {
     return response.data;
   },
 
+  checkSlugAvailability: async (slug: string, excludeId?: string): Promise<ApiResponse<{ available: boolean }>> => {
+    const params = excludeId ? `?excludeId=${excludeId}` : '';
+    const response = await api.get<ApiResponse<{ available: boolean }>>(`/categories/check-slug/${slug}${params}`);
+    return response.data;
+  },
+
   getCategoryPreview: async (slug: string, limit: number = 5): Promise<ApiResponse<{ category: Category; articles: any[]; count: number }>> => {
     const response = await api.get<ApiResponse<{ category: Category; articles: any[]; count: number }>>(`/categories/${slug}/preview?limit=${limit}`);
     return response.data;
@@ -20,22 +27,29 @@ export const categoriesService = {
 
   // Admin endpoints
   getAdminCategories: async (): Promise<ApiResponse<Category[]>> => {
-    const response = await api.get<ApiResponse<Category[]>>('/admin/categories');
-    return response.data;
+    return withFallback(
+      async () => {
+        const response = await api.get<ApiResponse<Category[]>>('/categories');
+        return response.data;
+      },
+      () => fallbackService.getAdminCategories()
+    );
   },
 
   createCategory: async (categoryData: CategoryFormData): Promise<ApiResponse<{ category: Category }>> => {
-    const response = await api.post<ApiResponse<{ category: Category }>>('/admin/categories', categoryData);
+    const response = await api.post<ApiResponse<{ category: Category }>>('/categories', categoryData);
     return response.data;
   },
 
   updateCategory: async (id: string, categoryData: Partial<CategoryFormData>): Promise<ApiResponse<{ category: Category }>> => {
-    const response = await api.put<ApiResponse<{ category: Category }>>(`/admin/categories/${id}`, categoryData);
+    const response = await api.put<ApiResponse<{ category: Category }>>(`/categories/${id}`, categoryData);
     return response.data;
   },
 
-  deleteCategory: async (id: string): Promise<ApiResponse<{}>> => {
-    const response = await api.delete<ApiResponse<{}>>(`/admin/categories/${id}`);
+  deleteCategory: async (id: string, options?: { reassignTo?: string; forceDelete?: boolean }): Promise<ApiResponse<{}>> => {
+    const response = await api.delete<ApiResponse<{}>>(`/categories/${id}`, {
+      data: options
+    });
     return response.data;
   },
 };

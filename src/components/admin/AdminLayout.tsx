@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Globe,
   Settings,
+  Users,
+  UserCog,
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -150,6 +152,30 @@ export const AdminLayout: React.FC = () => {
 
           {/* Sidebar footer */}
           <div className="p-3 border-t space-y-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="w-full justify-start"
+            >
+              <Link to="/admin/profile">
+                <UserCog className="mr-3 h-4 w-4" />
+                Profile
+              </Link>
+            </Button>
+            {user?.role === 'admin' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="w-full justify-start"
+              >
+                <Link to="/admin/users">
+                  <Users className="mr-3 h-4 w-4" />
+                  Users
+                </Link>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
