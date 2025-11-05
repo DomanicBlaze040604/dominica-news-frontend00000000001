@@ -41,7 +41,11 @@ export const authorsService = {
   getAdminAuthors: async (): Promise<ApiResponse<AuthorsResponse>> => {
     return withFallback(
       async () => {
+<<<<<<< HEAD
         const response = await api.get('/authors');
+=======
+        const response = await api.get('/admin/authors');
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
         return response.data;
       },
       () => fallbackService.getAdminAuthors()

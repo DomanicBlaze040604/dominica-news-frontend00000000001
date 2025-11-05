@@ -29,7 +29,11 @@ export const categoriesService = {
   getAdminCategories: async (): Promise<ApiResponse<Category[]>> => {
     return withFallback(
       async () => {
+<<<<<<< HEAD
         const response = await api.get<ApiResponse<Category[]>>('/categories');
+=======
+        const response = await api.get<ApiResponse<Category[]>>('/admin/categories');
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
         return response.data;
       },
       () => fallbackService.getAdminCategories()

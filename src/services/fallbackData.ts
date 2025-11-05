@@ -290,8 +290,13 @@ export const fallbackService = {
 
 // Helper function to check if we should use fallback data
 export const shouldUseFallback = (error: any): boolean => {
+<<<<<<< HEAD
   // Use fallback for 404 errors on API endpoints
   if (error?.response?.status === 404) {
+=======
+  // Use fallback for 404 errors on admin endpoints
+  if (error?.response?.status === 404 && error?.config?.url?.includes('/admin/')) {
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
     return true;
   }
   

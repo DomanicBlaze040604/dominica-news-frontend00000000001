@@ -89,7 +89,11 @@ export const articlesService = {
         if (params?.category) searchParams.append('category', params.category);
 
         const response = await api.get<ApiResponse<ArticlesResponse>>(
+<<<<<<< HEAD
           `/articles?${searchParams.toString()}`
+=======
+          `/admin/articles?${searchParams.toString()}`
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
         );
         return response.data;
       },

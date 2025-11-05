@@ -69,7 +69,11 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // Request interceptor to add auth token and metadata
 apiClient.interceptors.request.use(
+<<<<<<< HEAD
   async (config) => {
+=======
+  (config) => {
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
     const endpoint = config.url || '';
     
     // Check rate limiting
@@ -77,6 +81,7 @@ apiClient.interceptors.request.use(
       const error = new Error('Rate limit exceeded. Please slow down your requests.');
       (error as any).isRateLimit = true;
       return Promise.reject(error);
+<<<<<<< HEAD
     }
     
     // Add to request queue
@@ -122,6 +127,18 @@ apiClient.interceptors.request.use(
       }
     }
     
+=======
+    }
+    
+    // Add to request queue
+    addToRequestQueue(endpoint);
+    
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
     // Add request metadata
     (config as AxiosRequestConfig & { metadata?: { startTime: Date; endpoint: string } }).metadata = { 
       startTime: new Date(),
@@ -182,6 +199,7 @@ apiClient.interceptors.response.use(
       }
     }
 
+<<<<<<< HEAD
     // Handle 401 errors with token refresh attempt
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -257,6 +275,36 @@ apiClient.interceptors.response.use(
       if (apiEndpoints.some(apiEndpoint => endpoint.includes(apiEndpoint))) {
         console.warn(`API endpoint not found: ${endpoint}. Using fallback data if available.`);
         // Don't show toast for API 404s as fallback data will be used
+=======
+    // Handle 401 errors by clearing token and redirecting to login
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+      toast.error('Session expired. Please log in again.');
+      
+      // Only redirect if not already on auth page
+      if (!window.location.pathname.includes('/auth')) {
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 1500);
+      }
+      
+      return Promise.reject(error);
+    }
+
+    // Handle 403 errors (forbidden)
+    if (error.response?.status === 403) {
+      toast.error('Access denied. You do not have permission to perform this action.');
+      return Promise.reject(error);
+    }
+
+    // Handle 404 errors
+    if (error.response?.status === 404) {
+      const endpoint = originalRequest?.metadata?.endpoint || originalRequest?.url || '';
+      if (endpoint.includes('/admin/')) {
+        console.warn(`Admin endpoint not found: ${endpoint}. Using fallback data if available.`);
+        // Don't show toast for admin 404s as fallback data will be used
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
       } else {
         toast.error('Resource not found.');
       }
@@ -289,6 +337,7 @@ apiClient.interceptors.response.use(
       if (config.logging.enableConsole) {
         console.log(`Retrying request (${retryCount}/${maxRetries}) after ${Math.round(delay)}ms...`);
       }
+<<<<<<< HEAD
       
       // Show user-friendly retry message
       const endpoint = originalRequest?.metadata?.endpoint || originalRequest?.url || 'API';
@@ -296,6 +345,9 @@ apiClient.interceptors.response.use(
         duration: delay,
         description: 'Please check your internet connection'
       });
+=======
+      toast.info(`Connection failed. Retrying... (${retryCount}/${maxRetries})`);
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
       
       await new Promise(resolve => setTimeout(resolve, delay));
       
@@ -313,6 +365,7 @@ apiClient.interceptors.response.use(
       if (config.logging.enableConsole) {
         console.log(`Server error, retrying (${retryCount}/${maxRetries}) after ${delay}ms...`);
       }
+<<<<<<< HEAD
       
       // Show user-friendly server error message
       const endpoint = originalRequest?.metadata?.endpoint || originalRequest?.url || 'API';
@@ -320,6 +373,9 @@ apiClient.interceptors.response.use(
         duration: delay,
         description: 'Our servers are experiencing issues. Please wait...'
       });
+=======
+      toast.error(`Server error. Retrying... (${retryCount}/${maxRetries})`);
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
       
       await new Promise(resolve => setTimeout(resolve, delay));
       return apiClient(originalRequest);
@@ -328,6 +384,7 @@ apiClient.interceptors.response.use(
     // Reset retry count for non-retryable errors
     retryCount = 0;
     
+<<<<<<< HEAD
     // Handle specific error messages with better user experience
     if (!error.response) {
       (error as any).message = 'Network error. Please check your internet connection.';
@@ -353,6 +410,18 @@ apiClient.interceptors.response.use(
           description: errorMessage,
           duration: 5000
         });
+=======
+    // Handle specific error messages
+    if (!error.response) {
+      (error as any).message = 'Network error. Please check your internet connection.';
+      toast.error('Network error. Please check your internet connection.');
+    } else if (error.response.status >= 500) {
+      toast.error('Server error. Please try again later.');
+    } else if (error.response.status >= 400 && error.response.status < 500) {
+      const errorMessage = error.response.data?.error || error.response.data?.message || 'Request failed';
+      if (!errorMessage.includes('Session expired') && !errorMessage.includes('Access denied')) {
+        toast.error(errorMessage);
+>>>>>>> 7c457f5fd32731065b3f73f365f8476085debfc4
       }
     }
     
